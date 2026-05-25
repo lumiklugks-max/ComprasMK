@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus Pedidos 📦</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .pedidos-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #00d2ff;
+            margin-bottom: 30px;
+        }
+        .card-pedido {
+            background-color: #202024;
+            border: 1px solid #29292e;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .topo-pedido {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #29292e;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .data-pedido {
+            color: #a8a8b3;
+            font-size: 0.9rem;
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+        /* Cores dos Status */
+        .status-Pendente { background-color: rgba(255, 184, 108, 0.2); color: #ffb86c; border: 1px solid #ffb86c; }
+        .status-Producao { background-color: rgba(139, 233, 253, 0.2); color: #8be9fd; border: 1px solid #8be9fd; }
+        .status-Concluido { background-color: rgba(80, 250, 123, 0.2); color: #50fa7b; border: 1px solid #50fa7b; }
+        .status-Cancelado { background-color: rgba(255, 85, 85, 0.2); color: #ff5555; border: 1px solid #ff5555; }
+
+        .item-linha {
+            font-size: 0.95rem;
+            margin: 5px 0;
+            color: #e1e1e6;
+        }
+        .btn-voltar {
+            background: none;
+            border: 1px solid #29292e;
+            color: #a8a8b3;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+        }
+        .btn-voltar:hover {
+            background-color: #29292e;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="pedidos-container">
+        <a href="catalogo.html" class="btn-voltar">← Voltar para o Catálogo</a>
+        
+        <h1>📦 Meus Pedidos</h1>
+
+        <div id="lista-meus-pedidos">
+            <p style="text-align: center; color: #a8a8b3;">Buscando seus pedidos...</p>
+        </div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCZq4K95loqNKYYuPFFrMS9QcUTCQ-FYRU",
+        authDomain: "cadastroteste047.firebaseapp.com",
+        databaseURL: "https://cadastroteste047-default-rtdb.firebaseio.com",
+        projectId: "cadastroteste047",
+        storageBucket: "cadastroteste047.firebasestorage.app",
+        appId: "1:908890693829:web:2bd31d24474e27507310ac"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            carregarPedidosDoCliente(user.uid);
+        } else {
+            window.location.href = 'index.html';
+        }
+    });
+
+    function carregarPedidosDoCliente(clienteUid) {
+        const pedidosRef = ref(db, 'pedidos');
+
+        onValue(pedidosRef, (snapshot) => {
+            const container = document.getElementById('lista-meus-pedidos');
+            container.innerHTML = "";
+            const pedidos = snapshot.val();
+
+            let temPedidos = false;
+
+            if (pedidos) {
+                // Ordena para mostrar o mais recente primeiro
+                const chavesOrdenadas = Object.keys(pedidos).reverse();
+
+                chavesOrdenadas.forEach((id) => {
+                    const ped = pedidos[id];
+
+                    // Filtra para mostrar APENAS os pedidos desse cliente logado
+                    if (ped.clienteId === clienteUid) {
+                        temPedidos = true;
+
+                        // Classe css baseada no status para mudar a cor do texto do badge
+                        let classeStatus = "status-Pendente";
+                        if (ped.status === "Em Produção") classeStatus = "status-Producao";
+                        if (ped.status === "Concluído") classeStatus = "status-Concluido";
+                        if (ped.status === "Cancelado") classeStatus = "status-Cancelado";
+
+                        let itensHtml = "";
+                        if (ped.itens && Array.isArray(ped.itens)) {
+                            ped.itens.forEach(item => {
+                                itensHtml += `<div class="item-linha">🎒 <strong>${item.quantidade}x</strong> ${item.nome}</div>`;
+                            });
+                        }
+
+                        const card = document.createElement('div');
+                        card.className = 'card-pedido';
+                        card.innerHTML = `
+                            <div class="topo-pedido">
+                                <span class="data-pedido">📅 ${ped.data || 'Sem data'}</span>
+                                <span class="status-badge ${classeStatus}">${ped.status || 'Pendente'}</span>
+                            </div>
+                            <div class="itens-pedido">
+                                ${itensHtml}
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    }
+                });
+            }
+
+            if (!temPedidos) {
+                container.innerHTML = "<p style='text-align: center; color: #a8a8b3;'>Você ainda não fez nenhum pedido.</p>";
+            }
+        });
+    }
+</script>
+</body>
+</html>
