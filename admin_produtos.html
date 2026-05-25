@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Produtos</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Ajustes específicos de layout para a área administrativa */
+        .admin-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+        }
+        .box-container {
+            max-width: 100%;
+            margin-top: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background-color: #121214;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid #29292e;
+        }
+        th {
+            background-color: #1c1c1e;
+            color: #00d2ff;
+            font-weight: bold;
+        }
+        td {
+            color: #e1e1e6;
+        }
+        .btn-delete {
+            background-color: #ff4b2b;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: background-color 0.2s;
+        }
+        .btn-delete:hover {
+            background-color: #e03b1a;
+        }
+        .nav-link {
+            color: #00d2ff;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-layout">
+        <div style="text-align: right;">
+            <a href="admin_pedidos.html" class="nav-link">Gerenciar Pedidos Recebidos 📦 →</a>
+        </div>
+
+        <div class="box-container">
+            <h2>📦 Cadastrar Novo Produto</h2>
+            <p>Insira as informações do item para atualizar o catálogo</p>
+
+            <div class="form-group">
+                <label>Nome do Produto</label>
+                <input type="text" id="prod-nome" placeholder="Ex: Camiseta Oversized Preta">
+            </div>
+
+            <div class="form-group">
+                <label>Descrição Curta</label>
+                <textarea id="prod-descricao" rows="3" placeholder="Detalhes do produto, materiais ou especificações..." style="width: 100%; padding: 14px; background-color: #121214; border: 2px solid #29292e; border-radius: 6px; color: #ffffff; font-size: 1rem; resize: none; font-family: inherit;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Quantidade em Estoque</label>
+                <input type="number" id="prod-estoque" placeholder="Ex: 100" min="0">
+            </div>
+
+            <button class="btn-primary" id="btn-salvar">Salvar Produto no Catálogo ✨</button>
+            <div class="msg-status" id="status-produto"></div>
+        </div>
+
+        <div class="box-container">
+            <h3>Produtos Ativos no Catálogo</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                            <th>Disponível</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-produtos-corpo">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCZq4K95loqNKYYuPFFrMS9QcUTCQ-FYRU",
+        authDomain: "cadastroteste047.firebaseapp.com",
+        databaseURL: "https://cadastroteste047-default-rtdb.firebaseio.com",
+        projectId: "cadastroteste047",
+        storageBucket: "cadastroteste047.firebasestorage.app",
+        appId: "1:908890693829:web:2bd31d24474e27507310ac"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const produtosRef = ref(db, 'produtos');
+
+    // LÓGICA PARA ADICIONAR PRODUTO
+    document.getElementById('btn-salvar').onclick = async function() {
+        const nome = document.getElementById('prod-nome').value.trim();
+        const descricao = document.getElementById('prod-descricao').value.trim();
+        const estoque = document.getElementById('prod-estoque').value.trim();
+        const statusDiv = document.getElementById('status-produto');
+
+        if (!nome || !descricao || !estoque) {
+            statusDiv.style.color = "#ff4b2b";
+            statusDiv.innerHTML = "Por favor, preencha todos os campos do produto!";
+            return;
+        }
+
+        try {
+            // Cria um ID único aleatório dentro do nó 'produtos'
+            const novoItemRef = push(produtosRef);
+            await set(novoItemRef, {
+                nome: nome,
+                descricao: descricao,
+                estoque: parseInt(estoque) || 0
+            });
+
+            statusDiv.style.color = "#25d366";
+            statusDiv.innerHTML = "Produto adicionado com sucesso!";
+
+            // Reseta o formulário
+            document.getElementById('prod-nome').value = "";
+            document.getElementById('prod-descricao').value = "";
+            document.getElementById('prod-estoque').value = "";
+
+            setTimeout(() => { statusDiv.innerHTML = ""; }, 2000);
+
+        } catch (error) {
+            statusDiv.style.color = "#ff4b2b";
+            statusDiv.innerHTML = "Erro ao salvar no banco: " + error.message;
+        }
+    };
+
+    // LÓGICA PARA EXIBIR E EXCLUIR PRODUTOS EM TEMPO REAL
+    onValue(produtosRef, (snapshot) => {
+        const tabelaCorpo = document.getElementById('lista-produtos-corpo');
+        tabelaCorpo.innerHTML = "";
+        const lista = snapshot.val();
+
+        if (lista) {
+            Object.keys(lista).forEach((id) => {
+                const item = lista[id];
+                
+                const linha = document.createElement('tr');
+                linha.innerHTML = `
+                    <td><strong>${item.nome}</strong></td>
+                    <td style="color: #a8a8b3; font-size: 0.9rem;">${item.descricao}</td>
+                    <td><span style="color: #00d2ff; font-weight: bold;">${item.estoque}</span> un</td>
+                    <td>
+                        <button class="btn-delete" data-id="${id}">Remover</button>
+                    </td>
+                `;
+                tabelaCorpo.appendChild(linha);
+            });
+
+            // Atribui o evento de clique para os botões gerados
+            document.querySelectorAll('.btn-delete').forEach(botao => {
+                botao.onclick = function() {
+                    const idParaDeletar = this.getAttribute('data-id');
+                    if (confirm("Tem certeza que deseja deletar este produto do catálogo?")) {
+                        remove(ref(db, 'produtos/' + idParaDeletar));
+                    }
+                };
+            });
+
+        } else {
+            tabelaCorpo.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #a8a8b3;">Nenhum produto em estoque.</td></tr>`;
+        }
+    });
+</script>
+</body>
+</html>

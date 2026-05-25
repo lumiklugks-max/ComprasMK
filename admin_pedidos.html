@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Gerenciamento de Pedidos</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background-color: #121214;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+        .admin-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #00d2ff;
+        }
+        .subtitulo {
+            text-align: center;
+            color: #a8a8b3;
+            margin-bottom: 30px;
+        }
+        .tabela-responsiva {
+            overflow-x: auto;
+            background-color: #202024;
+            border: 1px solid #29292e;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th, td {
+            padding: 15px;
+            border-bottom: 1px solid #29292e;
+            vertical-align: top;
+        }
+        th {
+            background-color: #121214;
+            color: #00d2ff;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+        tr:hover {
+            background-color: #29292e;
+        }
+        .info-cliente p {
+            margin: 2px 0;
+            font-size: 0.9rem;
+        }
+        .info-cliente .nome {
+            font-weight: bold;
+            color: #ffffff;
+        }
+        .info-cliente .detalhe {
+            color: #a8a8b3;
+            font-size: 0.8rem;
+        }
+        .lista-itens {
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        /* Estilização dos Status Dinâmicos */
+        .select-status {
+            background-color: #121214;
+            color: #ffffff;
+            border: 1px solid #29292e;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .select-status:focus {
+            border-color: #00d2ff;
+        }
+        .status-Pendente { color: #ffb86c; border-color: #ffb86c; }
+        .status-Producao { color: #8be9fd; border-color: #8be9fd; }
+        .status-Concluido { color: #50fa7b; border-color: #50fa7b; }
+        .status-Cancelado { color: #ff5555; border-color: #ff5555; }
+
+        .btn-voltar {
+            background: none;
+            border: 1px solid #29292e;
+            color: #a8a8b3;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+        }
+        .btn-voltar:hover {
+            background-color: #29292e;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-container">
+        <a href="produtos.html" class="btn-voltar">← Voltar para Produtos</a>
+        
+        <h1>👑 Painel do Administrador</h1>
+        <p class="subtitulo">Gerenciamento e monitoramento de pedidos em tempo real</p>
+
+        <div class="tabela-responsiva">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Data / Hora</th>
+                        <th style="width: 25%;">Cliente</th>
+                        <th style="width: 35%;">Itens Pedidos</th>
+                        <th style="width: 25%;">Status do Pedido</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-tabela-pedidos">
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #a8a8b3;">Carregando pedidos...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCZq4K95loqNKYYuPFFrMS9QcUTCQ-FYRU",
+        authDomain: "cadastroteste047.firebaseapp.com",
+        databaseURL: "https://cadastroteste047-default-rtdb.firebaseio.com",
+        projectId: "cadastroteste047",
+        storageBucket: "cadastroteste047.firebasestorage.app",
+        appId: "1:908890693829:web:2bd31d24474e27507310ac"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // 1. BUSCA E ATUALIZA OS PEDIDOS EM TEMPO REAL
+    function monitorarPedidos() {
+        const pedidosRef = ref(db, 'pedidos');
+
+        onValue(pedidosRef, (snapshot) => {
+            const tbody = document.getElementById('corpo-tabela-pedidos');
+            tbody.innerHTML = "";
+            const pedidos = snapshot.val();
+
+            if (pedidos) {
+                // Inverte as chaves para que o pedido mais novo fique no topo da lista
+                const chavesOrdenadas = Object.keys(pedidos).reverse();
+
+                chavesOrdenadas.forEach((id) => {
+                    const ped = pedidos[id];
+
+                    // Processa e formata a lista de sub-itens comprados
+                    let itensHtml = "<div class='lista-itens'>";
+                    if (ped.itens && Array.isArray(ped.itens)) {
+                        ped.itens.forEach(item => {
+                            itensHtml += `• <strong>${item.quantidade}x</strong> ${item.nome}<br>`;
+                        });
+                    } else {
+                        itensHtml += "<span style='color: #ff5555;'>Erro ou estrutura antiga</span>";
+                    }
+                    itensHtml += "</div>";
+
+                    // Renderiza a linha completa do pedido
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="color: #a8a8b3; font-size: 0.9rem;">${ped.data || 'Sem data'}</td>
+                        <td class="info-cliente">
+                            <p class="nome">${ped.clienteNome || 'Não informado'}</p>
+                            <p class="detalhe">📞 ${ped.clienteTelefone || 'Não informado'}</p>
+                            <p class="detalhe">✉️ ${ped.clienteEmail || 'Não informado'}</p>
+                        </td>
+                        <td>${itensHtml}</td>
+                        <td>
+                            <select class="select-status ${obterClasseStatus(ped.status)}" onchange="alterarStatusPedido('${id}', this.value)">
+                                <option value="Pendente" ${ped.status === 'Pendente' ? 'selected' : ''}>⏳ Pendente</option>
+                                <option value="Em Produção" ${ped.status === 'Em Produção' ? 'selected' : ''}>🛠️ Em Produção</option>
+                                <option value="Concluído" ${ped.status === 'Concluído' ? 'selected' : ''}>✅ Concluído</option>
+                                <option value="Cancelado" ${ped.status === 'Cancelado' ? 'selected' : ''}>❌ Cancelado</option>
+                            </select>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = "<tr><td colspan='4' style='text-align: center; color: #a8a8b3;'>Nenhum pedido realizado no momento.</td></tr>";
+            }
+        });
+    }
+
+    // Altera as cores da borda/texto do select conforme o status salvo
+    function obterClasseStatus(status) {
+        if (status === 'Em Produção') return 'status-Producao';
+        if (status === 'Concluído') return 'status-Concluido';
+        if (status === 'Cancelado') return 'status-Cancelado';
+        return 'status-Pendente';
+    }
+
+    // 2. ALTERA O STATUS DIRETO NO BANCO AO MUDAR O DROPDOWN
+    window.alterarStatusPedido = function(id, novoStatus) {
+        const pedidoEspecificoRef = ref(db, `pedidos/${id}`);
+        
+        update(pedidoEspecificoRef, { status: novoStatus })
+            .then(() => {
+                console.log("Status atualizado!");
+            })
+            .catch((error) => {
+                alert("Erro ao modificar status: " + error.message);
+            });
+    };
+
+    // Inicializa a escuta
+    monitorarPedidos();
+</script>
+</body>
+</html>
