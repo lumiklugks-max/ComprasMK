@@ -83,7 +83,7 @@
         }
         .card-produto p {
             text-align: left;
-            margin: 0 0 15px 0;
+            margin: 0 0 12px 0;
             font-size: 0.9rem;
             line-height: 1.4;
             color: #a8a8b3;
@@ -91,6 +91,12 @@
         .estoque-tag {
             font-size: 0.8rem;
             color: #a8a8b3;
+            margin-bottom: 6px;
+        }
+        .preco-tag {
+            font-size: 1.15rem;
+            color: #00d2ff;
+            font-weight: bold;
             margin-bottom: 15px;
         }
         .controles-qtd {
@@ -141,7 +147,7 @@
         }
         .barra-conteudo {
             width: 100%;
-            max-width: 600px;
+            max-width: 800px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -151,6 +157,14 @@
             font-size: 1rem;
             color: #a8a8b3;
             white-space: nowrap;
+        }
+        .valor-total-carrinho {
+            font-size: 1.1rem;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        .valor-total-carrinho span {
+            color: #00e676; /* "Total:" em verde */
         }
         .btn-primary {
             background-color: #00d2ff;
@@ -188,6 +202,7 @@
     <div class="barra-fixa-pedido">
         <div class="barra-conteudo">
             <div class="contador-total-itens" id="texto-resumo">Nenhum item selecionado</div>
+            <div class="valor-total-carrinho" id="container-preco-total"><span>Total:</span> R$ 0,00</div>
             <button class="btn-primary" id="btn-enviar-pedido" style="padding: 12px 24px; font-size: 1rem;">Confirmar Pedido 🚀</button>
         </div>
     </div>
@@ -213,8 +228,8 @@
     let usuarioAtual = null;
     let dadosClienteExtra = null;
     let carrinhoLocal = {}; 
+    let cacheProdutos = {}; // Armazena os dados dos produtos para cálculo de valores
 
-    // Força a renderização inicial independente do estado do Login
     carregarProdutosDoCatalogo();
 
     onAuthStateChanged(auth, async (user) => {
@@ -238,6 +253,7 @@
             if (!container) return;
             container.innerHTML = "";
             const produtos = snapshot.val();
+            cacheProdutos = produtos || {};
 
             if (produtos) {
                 Object.keys(produtos).forEach((id) => {
@@ -245,6 +261,9 @@
                         const prod = produtos[id];
                         const urlImagem = prod.imagem || prod.foto || "";
                         let componenteImagem = urlImagem ? `<img src="${urlImagem}" class="produto-img">` : `<div class="produto-sem-img">📦</div>`;
+                        
+                        const valorUnitario = prod.preco !== undefined ? parseFloat(prod.preco) : 0;
+                        const precoExibicao = `R$ ${valorUnitario.toFixed(2)}`;
 
                         if (!carrinhoLocal[id]) carrinhoLocal[id] = 0;
 
@@ -256,6 +275,7 @@
                                     <h3>${prod.nome || "Sem Nome"}</h3>
                                     <p>${prod.descricao || "Sem descrição."}</p>
                                     <div class="estoque-tag">Disponível em estoque: <strong>${prod.estoque || 0}</strong> un</div>
+                                    <div class="preco-tag">${precoExibicao}</div>
                                 </div>
                                 <div class="produto-imagem-container">${componenteImagem}</div>
                             </div>
@@ -273,7 +293,7 @@
             }
             atualizarBarraResumo();
         }, (error) => {
-            document.getElementById('espaco-produtos').innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #ff4b2b;'>Aguardando liberação de regras públicas no console do Firebase...</p>";
+            document.getElementById('espaco-produtos').innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #ff4b2b;'>Erro de permissões no Realtime Database.</p>";
         });
     }
 
@@ -287,20 +307,54 @@
     };
 
     function atualizarBarraResumo() {
-        let total = Object.values(carrinhoLocal).reduce((a, b) => a + b, 0);
-        document.getElementById('texto-resumo').innerText = total === 0 ? "Nenhum item selecionado" : `${total} item(ns) selecionado(s)`;
+        let totalItens = 0;
+        let valorTotalAcumulado = 0;
+
+        Object.keys(carrinhoLocal).forEach(id => {
+            const quantidade = carrinhoLocal[id];
+            totalItens += quantidade;
+
+            if (quantidade > 0 && cacheProdutos[id]) {
+                const precoUnitario = cacheProdutos[id].preco !== undefined ? parseFloat(cacheProdutos[id].preco) : 0;
+                valorTotalAcumulado += (quantidade * precoUnitario);
+            }
+        });
+
+        // Atualiza a contagem textual à esquerda
+        const txtResumo = document.getElementById('texto-resumo');
+        if (txtResumo) {
+            txtResumo.innerText = totalItens === 0 ? "Nenhum item selecionado" : `${totalItens} item(ns) selecionado(s)`;
+        }
+
+        // Atualiza o valor monetário à direita (Total em verde)
+        const txtPrecoTotal = document.getElementById('container-preco-total');
+        if (txtPrecoTotal) {
+            txtPrecoTotal.innerHTML = `<span>Total:</span> R$ ${valorTotalAcumulado.toFixed(2)}`;
+        }
     }
 
     document.getElementById('btn-enviar-pedido').onclick = async function() {
         const itensDoPedido = [];
+        let valorFinalPedido = 0;
+
         try {
             const snapshot = await get(ref(db, 'produtos'));
             const produtos = snapshot.val();
+            
             Object.keys(carrinhoLocal).forEach(id => {
-                if (carrinhoLocal[id] > 0 && produtos[id]) {
-                    itensDoPedido.push({ nome: produtos[id].nome, quantidade: carrinhoLocal[id] });
+                const qtd = carrinhoLocal[id];
+                if (qtd > 0 && produtos && produtos[id]) {
+                    const precoProd = produtos[id].preco !== undefined ? parseFloat(produtos[id].preco) : 0;
+                    valorFinalPedido += (qtd * precoProd);
+
+                    itensDoPedido.push({ 
+                        nome: produtos[id].nome, 
+                        quantidade: qtd,
+                        precoUnitario: precoProd
+                    });
                 }
             });
+            
             if (itensDoPedido.length === 0) return alert("Carrinho vazio!");
 
             await set(push(ref(db, 'pedidos')), {
@@ -308,9 +362,12 @@
                 clienteNome: dadosClienteExtra ? dadosClienteExtra.nome : 'Não informado',
                 data: new Date().toLocaleString('pt-BR'),
                 itens: itensDoPedido,
+                valorTotal: valorFinalPedido,
                 status: "Pendente"
             });
-            alert("Pedido enviado! 🎉");
+            
+            alert("Pedido enviado com sucesso! 🎉");
+            Object.keys(carrinhoLocal).forEach(id => { carrinhoLocal[id] = 0; });
             window.location.href = 'meus_pedidos.html';
         } catch (e) { alert(e.message); }
     };
