@@ -6,7 +6,7 @@
     <title>Nosso Catálogo</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Layout Geral do Catálogo para evitar tela preta */
+        /* Layout Geral do Catálogo */
         body {
             background-color: #121214;
             color: #ffffff;
@@ -20,7 +20,7 @@
         .catalogo-container {
             width: 100%;
             max-width: 1000px;
-            margin-bottom: 120px; /* Espaço para a barra flutuante */
+            margin-bottom: 120px;
         }
         h1 {
             text-align: center;
@@ -47,6 +47,41 @@
         .card-produto:hover {
             border-color: #00d2ff;
         }
+        
+        /* Divisória para alinhar Texto e Imagem Lado a Lado */
+        .produto-conteudo-superior {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .produto-detalhes {
+            flex: 1;
+        }
+        
+        /* Estilização para a Imagem do Produto */
+        .produto-imagem-container {
+            width: 80px;
+            height: 80px;
+            background-color: #121214;
+            border: 1px solid #29292e;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .produto-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .produto-sem-img {
+            font-size: 2rem;
+        }
+
         .card-produto h3 {
             text-align: left;
             margin: 0 0 8px 0;
@@ -146,7 +181,7 @@
 
     <div class="catalogo-container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; width: 100%;">
-            <span id="saudacao-cliente" style="color: #a8a8b3; font-weight: bold;">Carregando...</span>
+            <span id="saudacao-cliente" style="color: #a8a8b3; font-weight: bold;">Carregando usuário...</span>
             <div style="display: flex; gap: 15px; align-items: center;">
                 <a href="meus_pedidos.html" style="color: #00d2ff; font-weight: bold; text-decoration: none; border: 1px solid #00d2ff; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem;">🛍️ Meus Pedidos</a>
                 <button id="btn-sair" style="background: none; border: none; color: #ff4b2b; cursor: pointer; font-weight: bold; text-decoration: underline; font-size: 1rem;">Sair</button>
@@ -156,7 +191,9 @@
         <h1>🛍️ Nosso Catálogo</h1>
         <p style="text-align: center; color: #a8a8b3;">Escolha os itens desejados e defina a quantidade abaixo</p>
 
-        <div class="grid-produtos" id="espaco-produtos"></div>
+        <div class="grid-produtos" id="espaco-produtos">
+            <p style="grid-column: 1/-1; text-align: center; color: #a8a8b3;">Buscando produtos no banco de dados...</p>
+        </div>
     </div>
 
     <div class="barra-fixa-pedido">
@@ -168,195 +205,4 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-    import { getDatabase, ref, onValue, get, push, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyCZq4K95loqNKYYuPFFrMS9QcUTCQ-FYRU",
-        authDomain: "cadastroteste047.firebaseapp.com",
-        databaseURL: "https://cadastroteste047-default-rtdb.firebaseio.com",
-        projectId: "cadastroteste047",
-        storageBucket: "cadastroteste047.firebasestorage.app",
-        appId: "1:908890693829:web:2bd31d24474e27507310ac"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
-
-    let usuarioAtual = null;
-    let dadosClienteExtra = null;
-    let carrinhoLocal = {}; 
-
-    // 1. MONITOR DE AUTENTICAÇÃO DO USUÁRIO
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            usuarioAtual = user;
-            
-            try {
-                const snapshot = await get(ref(db, 'usuarios/' + user.uid));
-                if (snapshot.exists()) {
-                    dadosClienteExtra = snapshot.val();
-                    document.getElementById('saudacao-cliente').innerText = `Olá, ${dadosClienteExtra.nome} 👋`;
-                } else {
-                    document.getElementById('saudacao-cliente').innerText = `Olá 👋`;
-                }
-            } catch (err) {
-                console.error("Erro ao obter dados adicionais do usuário:", err);
-                document.getElementById('saudacao-cliente').innerText = `Olá 👋`;
-            }
-            
-            carregarProdutosDoCatalogo();
-        } else {
-            window.location.href = 'index.html';
-        }
-    });
-
-    // 2. RECUPERAÇÃO DOS PRODUTOS DO BANCO E ESCALABILIDADE DA VITRINE
-    function carregarProdutosDoCatalogo() {
-        const produtosRef = ref(db, 'produtos');
-        
-        onValue(produtosRef, (snapshot) => {
-            const container = document.getElementById('espaco-produtos');
-            if (!container) return;
-            
-            container.innerHTML = "";
-            const produtos = snapshot.val();
-
-            if (produtos) {
-                Object.keys(produtos).forEach((id) => {
-                    try {
-                        const prod = produtos[id];
-                        
-                        const nomeProd = prod.nome || "Produto Sem Nome";
-                        const descProd = prod.descricao || "Sem descrição preenchida.";
-                        const estoqueProd = prod.estoque !== undefined ? parseInt(prod.estoque) : 0;
-
-                        if (!carrinhoLocal[id]) carrinhoLocal[id] = 0;
-
-                        const card = document.createElement('div');
-                        card.className = 'card-produto';
-                        card.innerHTML = `
-                            <div>
-                                <h3>${nomeProd}</h3>
-                                <p>${descProd}</p>
-                                <div class="estoque-tag">Disponível em estoque: <strong>${estoqueProd}</strong> un</div>
-                            </div>
-                            <div class="controles-qtd">
-                                <button class="btn-qtd" onclick="alterarQuantidade('${id}', -1, ${estoqueProd})">-</button>
-                                <span class="numero-qtd" id="qtd-${id}">${carrinhoLocal[id]}</span>
-                                <button class="btn-qtd" onclick="alterarQuantidade('${id}', 1, ${estoqueProd})">+</button>
-                            </div>
-                        `;
-                        container.appendChild(card);
-                    } catch (err) {
-                        console.error("Erro ao renderizar produto:", err);
-                    }
-                });
-            } else {
-                container.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #a8a8b3;'>Nenhum produto disponível no catálogo no momento.</p>";
-            }
-            atualizarBarraResumo();
-        });
-    }
-
-    // 3. GERENCIADOR DE MODIFICAÇÕES DE QUANTIDADE DO CARRINHO (Escopo Global)
-    window.alterarQuantidade = function(id, mudanca, limiteEstoque) {
-        let qtdAtual = carrinhoLocal[id] || 0;
-        let limiteNum = parseInt(limiteEstoque) || 0;
-        let novaQtd = qtdAtual + mudanca;
-
-        if (novaQtd < 0) return; 
-        if (mudanca > 0 && novaQtd > limiteNum) {
-            alert("Desculpe, não há mais unidades deste item em estoque.");
-            return;
-        }
-
-        carrinhoLocal[id] = novaQtd;
-        
-        const elementoContador = document.getElementById(`qtd-${id}`);
-        if (elementoContador) elementoContador.innerText = novaQtd;
-
-        atualizarBarraResumo();
-    };
-
-    // 4. ATUALIZADOR DO CARD DO CONTADOR INFERIOR
-    function atualizarBarraResumo() {
-        let totalItens = 0;
-        Object.keys(carrinhoLocal).forEach(id => {
-            totalItens += carrinhoLocal[id];
-        });
-
-        const textoResumo = document.getElementById('texto-resumo');
-        if (!textoResumo) return;
-
-        if (totalItens === 0) {
-            textoResumo.innerText = "Nenhum item selecionado";
-        } else if (totalItens === 1) {
-            textoResumo.innerText = "1 item selecionado";
-        } else {
-            textoResumo.innerText = `${totalItens} itens selecionados`;
-        }
-    }
-
-    // 5. PROCESSAMENTO E REDIRECIONAMENTO DE PEDIDOS
-    document.getElementById('btn-enviar-pedido').onclick = async function() {
-        const itensDoPedido = [];
-        
-        try {
-            const snapshotProdutos = await get(ref(db, 'produtos'));
-            const bancoProdutos = snapshotProdutos.val();
-
-            Object.keys(carrinhoLocal).forEach(id => {
-                const qtd = carrinhoLocal[id];
-                if (qtd > 0 && bancoProdutos && bancoProdutos[id]) {
-                    itensDoPedido.push({
-                        nome: bancoProdutos[id].nome || "Item",
-                        quantidade: qtd
-                    });
-                }
-            });
-
-            if (itensDoPedido.length === 0) {
-                alert("Selecione pelo menos 1 item antes de confirmar o pedido!");
-                return;
-            }
-
-            const dataAtual = new Date();
-            const dataFormatada = dataAtual.toLocaleDateString('pt-BR') + ' ' + dataAtual.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-
-            const novoPedidoRef = push(ref(db, 'pedidos'));
-            await set(novoPedidoRef, {
-                clienteId: usuarioAtual.uid,
-                clienteNome: dadosClienteExtra ? dadosClienteExtra.nome : 'Não informado',
-                clienteTelefone: dadosClienteExtra ? dadosClienteExtra.telefone : 'Não informado',
-                clienteEmail: usuarioAtual.email,
-                data: dataFormatada,
-                itens: itensDoPedido,
-                status: "Pendente"
-            });
-
-            alert("Pedido enviado com sucesso! 🎉");
-            
-            // Reseta o estado local do carrinho
-            Object.keys(carrinhoLocal).forEach(id => { carrinhoLocal[id] = 0; });
-            
-            // Leva o usuário direto para o monitoramento de status criado por você
-            window.location.href = 'meus_pedidos.html';
-
-        } catch (error) {
-            alert("Erro ao processar a requisição: " + error.message);
-        }
-    };
-
-    // 6. EVENTO DE LOGOUT SEGURO
-    document.getElementById('btn-sair').onclick = function() {
-        signOut(auth).then(() => {
-            window.location.href = 'index.html';
-        }).catch((error) => {
-            console.error("Erro ao deslogar usuário:", error);
-        });
-    };
-</script>
-</body>
-</html>
+    import
