@@ -6,37 +6,194 @@
     <title>Nosso Catálogo</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        body { background-color: #121214; color: #ffffff; font-family: Arial, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .catalogo-container { width: 100%; max-width: 1000px; margin-bottom: 120px; }
-        h1 { text-align: center; color: #ffffff; margin-top: 20px; }
-        .grid-produtos { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 30px; }
-        .card-produto { background-color: #202024; border: 1px solid #29292e; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; transition: border-color 0.2s; }
-        .card-produto:hover { border-color: #00d2ff; }
-        .produto-conteudo-superior { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 15px; }
-        .produto-detalhes { flex: 1; }
-        .produto-imagem-container { width: 80px; height: 80px; background-color: #121214; border: 1px solid #29292e; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
-        .produto-img { width: 100%; height: 100%; object-fit: cover; }
-        .produto-sem-img { font-size: 2rem; }
-        .card-produto h3 { text-align: left; margin: 0 0 8px 0; font-size: 1.2rem; color: #ffffff; }
-        .card-produto p { text-align: left; margin: 0 0 12px 0; font-size: 0.9rem; line-height: 1.4; color: #a8a8b3; }
-        .estoque-tag { font-size: 0.8rem; color: #a8a8b3; margin-bottom: 6px; }
-        .preco-tag { font-size: 1.15rem; color: #00d2ff; font-weight: bold; margin-bottom: 15px; }
-        .controles-qtd { display: flex; align-items: center; justify-content: space-between; background-color: #121214; border-radius: 8px; padding: 8px 12px; border: 1px solid #29292e; }
-        .btn-qtd { background: none; border: none; color: #00d2ff; font-size: 1.5rem; font-weight: bold; cursor: pointer; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; }
-        .numero-qtd { font-size: 1.2rem; font-weight: bold; color: #ffffff; min-width: 30px; text-align: center; }
-        .barra-fixa-pedido { position: fixed; bottom: 0; left: 0; right: 0; background-color: #202024; border-top: 2px solid #29292e; padding: 15px 20px; display: flex; justify-content: center; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); z-index: 999; }
-        .barra-conteudo { width: 100%; max-width: 800px; display: flex; align-items: center; justify-content: space-between; gap: 15px; }
-        .contador-total-itens { font-size: 1rem; color: #a8a8b3; white-space: nowrap; }
-        .valor-total-carrinho { font-size: 1.1rem; color: #ffffff; font-weight: bold; }
-        .valor-total-carrinho span { color: #00e676; }
-        .btn-primary { background-color: #00d2ff; color: #121214; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; padding: 12px 24px; font-size: 1rem; }
+        body {
+            background-color: #121214;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .catalogo-container {
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 120px;
+        }
+        h1 {
+            text-align: center;
+            color: #ffffff;
+            margin-top: 20px;
+        }
+        .grid-produtos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .card-produto {
+            background-color: #202024;
+            border: 1px solid #29292e;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: border-color 0.2s;
+        }
+        .card-produto:hover {
+            border-color: #00d2ff;
+        }
+        .produto-conteudo-superior {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .produto-detalhes {
+            flex: 1;
+        }
+        .produto-imagem-container {
+            width: 80px;
+            height: 80px;
+            background-color: #121214;
+            border: 1px solid #29292e;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .produto-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .produto-sem-img {
+            font-size: 2rem;
+        }
+        .card-produto h3 {
+            text-align: left;
+            margin: 0 0 8px 0;
+            font-size: 1.2rem;
+            color: #ffffff;
+        }
+        .card-produto p {
+            text-align: left;
+            margin: 0 0 12px 0;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: #a8a8b3;
+        }
+        .estoque-tag {
+            font-size: 0.8rem;
+            color: #a8a8b3;
+            margin-bottom: 6px;
+        }
+        .preco-tag {
+            font-size: 1.15rem;
+            color: #00d2ff;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .controles-qtd {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #121214;
+            border-radius: 8px;
+            padding: 8px 12px;
+            border: 1px solid #29292e;
+        }
+        .btn-qtd {
+            background: none;
+            border: none;
+            color: #00d2ff;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+        }
+        .btn-qtd:hover {
+            opacity: 0.7;
+        }
+        .numero-qtd {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffffff;
+            min-width: 30px;
+            text-align: center;
+        }
+        .barra-fixa-pedido {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #202024;
+            border-top: 2px solid #29292e;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: center;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .barra-conteudo {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        .contador-total-itens {
+            font-size: 1rem;
+            color: #a8a8b3;
+            white-space: nowrap;
+        }
+        .valor-total-carrinho {
+            font-size: 1.1rem;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        .valor-total-carrinho span {
+            color: #00e676; /* Total em verde */
+        }
+        .btn-primary {
+            background-color: #00d2ff;
+            color: #121214;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #00b5dc;
+        }
+        .aviso-vazio {
+            grid-column: 1/-1;
+            text-align: center;
+            color: #a8a8b3;
+            background-color: #202024;
+            border: 1px dashed #29292e;
+            padding: 40px;
+            border-radius: 12px;
+        }
     </style>
 </head>
 <body>
 
     <div class="catalogo-container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; width: 100%;">
-            <span id="saudacao-cliente" style="color: #a8a8b3; font-weight: bold;">Carregando usuário...</span>
+            <span id="saudacao-cliente" style="color: #a8a8b3; font-weight: bold;">Olá, Cliente 👋</span>
             <div style="display: flex; gap: 15px; align-items: center;">
                 <a href="meus_pedidos.html" style="color: #00d2ff; font-weight: bold; text-decoration: none; border: 1px solid #00d2ff; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem;">🛍️ Meus Pedidos</a>
                 <button id="btn-sair" style="background: none; border: none; color: #ff4b2b; cursor: pointer; font-weight: bold; text-decoration: underline; font-size: 1rem;">Sair</button>
@@ -55,7 +212,7 @@
         <div class="barra-conteudo">
             <div class="contador-total-itens" id="texto-resumo">Nenhum item selecionado</div>
             <div class="valor-total-carrinho" id="container-preco-total"><span>Total:</span> R$ 0,00</div>
-            <button class="btn-primary" id="btn-enviar-pedido">Confirmar Pedido 🚀</button>
+            <button class="btn-primary" id="btn-enviar-pedido" style="padding: 12px 24px; font-size: 1rem;">Confirmar Pedido 🚀</button>
         </div>
     </div>
 
@@ -64,6 +221,7 @@
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { getDatabase, ref, onValue, get, push, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
+    // Configurações apontadas para o seu novo banco ativo ComprasMK
     const firebaseConfig = {
         apiKey: "AIzaSyCZq4K95loqNKYYuPFFrMS9QcUTCQ-FYRU",
         authDomain: "comprasmk-241ae.firebaseapp.com",
@@ -82,6 +240,7 @@
     let carrinhoLocal = {}; 
     let cacheProdutos = {}; 
 
+    // Dispara a leitura em tempo real imediatamente
     carregarProdutosDoCatalogo();
 
     onAuthStateChanged(auth, async (user) => {
@@ -92,12 +251,8 @@
                 if (snapshot.exists()) {
                     dadosClienteExtra = snapshot.val();
                     document.getElementById('saudacao-cliente').innerText = `Olá, ${dadosClienteExtra.nome || "Cliente"} 👋`;
-                } else {
-                    document.getElementById('saudacao-cliente').innerText = `Olá, Cliente 👋`;
                 }
-            } catch (err) { 
-                document.getElementById('saudacao-cliente').innerText = `Olá, Cliente 👋`;
-            }
+            } catch (err) { console.log("Carregando sessão local..."); }
         } else {
             window.location.href = 'index.html';
         }
@@ -112,6 +267,7 @@
             const produtos = snapshot.val();
             cacheProdutos = produtos || {};
 
+            // Se existirem produtos cadastrados no nó
             if (produtos && Object.keys(produtos).length > 0) {
                 Object.keys(produtos).forEach((id) => {
                     try {
@@ -147,85 +303,32 @@
                     } catch (e) { console.error(e); }
                 });
             } else {
-                // Previne o congelamento visual se o banco estiver vazio (null)
-                container.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #a8a8b3; padding: 20px;'>Nenhum produto cadastrado no banco de dados novo. Por favor, adicione produtos através do painel de administração!</p>";
+                // EXIGÊNCIA ANTITRAVAMENTO: Exibe aviso amigável caso o banco esteja "null"
+                container.innerHTML = `
+                    <div class="aviso-vazio">
+                        <h3 style="margin: 0 0 10px 0; color: #00d2ff;">Banco conectado com sucesso! 🌐</h3>
+                        <p style="margin: 0;">Nenhum item foi encontrado no nó <strong>"produtos"</strong> deste projeto.</p>
+                        <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #a8a8b3;">Abra a tela de Gerenciamento e cadastre o primeiro produto para que ele apareça aqui!</p>
+                    </div>
+                `;
             }
             atualizarBarraResumo();
         }, (error) => {
-            document.getElementById('espaco-produtos').innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #ff4b2b;'>Erro de ligação. Certifique-se de que publicou as Regras como TRUE no painel do Firebase.</p>";
+            console.error(error);
+            document.getElementById('espaco-produtos').innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #ff4b2b;'>Erro de permissão. Defina as regras do Realtime Database como true.</p>";
         });
     }
 
+    // EXIGÊNCIAS DE REGRAS DE NEGÓCIO DO WHATSAPP
     window.alterarQuantidade = function(id, mudanca, limiteEstoque) {
+        // Regra 1: Não pode adicionar itens a um pedido quando o saldo/estoque estiver zerado
         if (limiteEstoque <= 0 && mudanca > 0) {
-            alert("Aviso: Este produto está com o estoque esgotado!");
+            alert("Não é possível adicionar este item. O estoque está completamente zerado!");
             return;
         }
+
         let novaQtd = (carrinhoLocal[id] || 0) + mudanca;
         if (novaQtd < 0) return;
-        if (mudanca > 0 && novaQtd > limiteEstoque) { 
-            alert(`Aviso: Limite máximo atingido (${limiteEstoque} un).`); 
-            return; 
-        }
-        carrinhoLocal[id] = novaQtd;
-        if(document.getElementById(`qtd-${id}`)) document.getElementById(`qtd-${id}`).innerText = novaQtd;
-        atualizarBarraResumo();
-    };
-
-    function atualizarBarraResumo() {
-        let totalItens = 0;
-        let valorTotalAcumulado = 0;
-        Object.keys(carrinhoLocal).forEach(id => {
-            const quantidade = carrinhoLocal[id];
-            totalItens += quantidade;
-            if (quantidade > 0 && cacheProdutos[id]) {
-                const precoUnitario = cacheProdutos[id].preco !== undefined ? parseFloat(cacheProdutos[id].preco) : 0;
-                valorTotalAcumulado += (quantidade * precoUnitario);
-            }
-        });
-        if (document.getElementById('texto-resumo')) {
-            document.getElementById('texto-resumo').innerText = totalItens === 0 ? "Nenhum item selecionado" : `${totalItens} item(ns) selecionado(s)`;
-        }
-        if (document.getElementById('container-preco-total')) {
-            document.getElementById('container-preco-total').innerHTML = `<span>Total:</span> R$ ${valorTotalAcumulado.toFixed(2)}`;
-        }
-    }
-
-    document.getElementById('btn-enviar-pedido').onclick = async function() {
-        const itensDoPedido = [];
-        let valorFinalPedido = 0;
-        try {
-            const snapshot = await get(ref(db, 'produtos'));
-            const produtos = snapshot.val() || {};
-            for (const id of Object.keys(carrinhoLocal)) {
-                const qtd = carrinhoLocal[id];
-                if (qtd > 0) {
-                    const estoqueAtualBanco = produtos[id] ? parseInt(produtos[id].estoque || 0) : 0;
-                    if (!produtos[id] || estoqueAtualBanco < qtd) {
-                        alert(`Erro de estoque: O item alterou no painel. Reajuste a quantidade.`);
-                        return;
-                    }
-                    const precoProd = produtos[id].preco !== undefined ? parseFloat(produtos[id].preco) : 0;
-                    valorFinalPedido += (qtd * precoProd);
-                    itensDoPedido.push({ nome: produtos[id].nome, quantidade: qtd, precoUnitario: precoProd });
-                }
-            }
-            if (itensDoPedido.length === 0) return alert("Seu carrinho está vazio!");
-            await set(push(ref(db, 'pedidos')), {
-                clienteId: usuarioAtual ? usuarioAtual.uid : 'anonimo',
-                clienteNome: dadosClienteExtra ? dadosClienteExtra.nome : 'Não informado',
-                data: new Date().toLocaleString('pt-BR'),
-                itens: itensDoPedido,
-                valorTotal: valorFinalPedido,
-                status: "Pendente"
-            });
-            alert("Pedido enviado com sucesso! 🎉");
-            Object.keys(carrinhoLocal).forEach(id => { carrinhoLocal[id] = 0; });
-            window.location.href = 'meus_pedidos.html';
-        } catch (e) { alert("Erro: " + e.message); }
-    };
-
-    document.getElementById('btn-sair').onclick = () => signOut(auth).then(() => window.location.href = 'index.html');
-</script>
-</body>
-</html>
+        
+        // Regra 2: Não pode adicionar mais itens do que o disponível em estoque
+        if (mudanca > 0 && novaQtd > limiteEstoque
