@@ -164,7 +164,7 @@
             font-weight: bold;
         }
         .valor-total-carrinho span {
-            color: #00e676; /* "Total:" em verde */
+            color: #00e676;
         }
         .btn-primary {
             background-color: #00d2ff;
@@ -184,7 +184,7 @@
 
     <div class="catalogo-container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; width: 100%;">
-            <span id="saudacao-cliente" style="color: #a8a8b3; font-weight: bold;">Olá, Cliente 👋</span>
+            <span id="saudacao-cliente" style="color: #a8a8b3; font-weight: bold;">Carregando usuário... 👋</span>
             <div style="display: flex; gap: 15px; align-items: center;">
                 <a href="meus_pedidos.html" style="color: #00d2ff; font-weight: bold; text-decoration: none; border: 1px solid #00d2ff; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem;">🛍️ Meus Pedidos</a>
                 <button id="btn-sair" style="background: none; border: none; color: #ff4b2b; cursor: pointer; font-weight: bold; text-decoration: underline; font-size: 1rem;">Sair</button>
@@ -210,14 +210,15 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-    import { getDatabase, ref, onValue, get, push, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    import { getDatabase, ref, onValue, get, push, set, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
+    // Configuração oficial ComprasMK ajustada de ponta a ponta
     const firebaseConfig = {
         apiKey: "AIzaSyCZq4K95loqNKYYuPFFrMS9QcUTCQ-FYRU",
-        authDomain: "cadastroteste047.firebaseapp.com",
-        databaseURL: "https://cadastroteste047-default-rtdb.firebaseio.com",
-        projectId: "cadastroteste047",
-        storageBucket: "cadastroteste047.firebasestorage.app",
+        authDomain: "comprasmk-241ae.firebaseapp.com",
+        databaseURL: "https://comprasmk-241ae-default-rtdb.firebaseio.com",
+        projectId: "comprasmk-241ae",
+        storageBucket: "comprasmk-241ae.firebasestorage.app",
         appId: "1:908890693829:web:2bd31d24474e27507310ac"
     };
 
@@ -228,7 +229,7 @@
     let usuarioAtual = null;
     let dadosClienteExtra = null;
     let carrinhoLocal = {}; 
-    let cacheProdutos = {}; // Armazena os dados dos produtos para cálculo de valores
+    let cacheProdutos = {};
 
     carregarProdutosDoCatalogo();
 
@@ -240,8 +241,13 @@
                 if (snapshot.exists()) {
                     dadosClienteExtra = snapshot.val();
                     document.getElementById('saudacao-cliente').innerText = `Olá, ${dadosClienteExtra.nome || "Cliente"} 👋`;
+                } else {
+                    document.getElementById('saudacao-cliente').innerText = `Olá, ${user.email || "Cliente"} 👋`;
                 }
-            } catch (err) { console.log("Permissão pendente de usuário"); }
+            } catch (err) { 
+                console.log("Erro ao carregar dados adicionais do usuário:", err);
+                document.getElementById('saudacao-cliente').innerText = `Olá, Cliente 👋`;
+            }
         } else {
             window.location.href = 'index.html';
         }
@@ -264,8 +270,14 @@
                         
                         const valorUnitario = prod.preco !== undefined ? parseFloat(prod.preco) : 0;
                         const precoExibicao = `R$ ${valorUnitario.toFixed(2)}`;
+                        const estoqueAtual = prod.estoque !== undefined ? parseInt(prod.estoque, 10) : 0;
 
                         if (!carrinhoLocal[id]) carrinhoLocal[id] = 0;
+                        
+                        // Caso o produto sofra alteração externa e a quantidade no carrinho ultrapasse o novo estoque
+                        if (carrinhoLocal[id] > estoqueAtual) {
+                            carrinhoLocal[id] = estoqueAtual;
+                        }
 
                         const card = document.createElement('div');
                         card.className = 'card-produto';
@@ -274,35 +286,41 @@
                                 <div class="produto-detalhes">
                                     <h3>${prod.nome || "Sem Nome"}</h3>
                                     <p>${prod.descricao || "Sem descrição."}</p>
-                                    <div class="estoque-tag">Disponível em estoque: <strong>${prod.estoque || 0}</strong> un</div>
+                                    <div class="estoque-tag">Disponível em estoque: <strong id="estoque-val-${id}">${estoqueAtual}</strong> un</div>
                                     <div class="preco-tag">${precoExibicao}</div>
                                 </div>
                                 <div class="produto-imagem-container">${componenteImagem}</div>
                             </div>
                             <div class="controles-qtd">
-                                <button class="btn-qtd" onclick="alterarQuantidade('${id}', -1, ${prod.estoque || 0})">-</button>
+                                <button class="btn-qtd" onclick="alterarQuantidade('${id}', -1, ${estoqueAtual})">-</button>
                                 <span class="numero-qtd" id="qtd-${id}">${carrinhoLocal[id]}</span>
-                                <button class="btn-qtd" onclick="alterarQuantidade('${id}', 1, ${prod.estoque || 0})">+</button>
+                                <button class="btn-qtd" onclick="alterarQuantidade('${id}', 1, ${estoqueAtual})">+</button>
                             </div>
                         `;
                         container.appendChild(card);
-                    } catch (e) { console.error(e); }
+                    } catch (e) { console.error("Erro ao renderizar produto individual:", e); }
                 });
             } else {
                 container.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #a8a8b3;'>Nenhum produto cadastrado.</p>";
             }
             atualizarBarraResumo();
         }, (error) => {
-            document.getElementById('espaco-produtos').innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #ff4b2b;'>Erro de permissões no Realtime Database.</p>";
+            console.error(error);
+            document.getElementById('espaco-produtos').innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #ff4b2b;'>Erro de conexões no Realtime Database.</p>";
         });
     }
 
     window.alterarQuantidade = function(id, mudanca, limiteEstoque) {
         let novaQtd = (carrinhoLocal[id] || 0) + mudanca;
         if (novaQtd < 0) return;
-        if (mudanca > 0 && novaQtd > limiteEstoque) { alert("Estoque esgotado!"); return; }
+        if (mudanca > 0 && novaQtd > limiteEstoque) { 
+            alert("Quantidade limite em estoque atingida!"); 
+            return; 
+        }
         carrinhoLocal[id] = novaQtd;
-        if(document.getElementById(`qtd-${id}`)) document.getElementById(`qtd-${id}`).innerText = novaQtd;
+        if(document.getElementById(`qtd-${id}`)) {
+            document.getElementById(`qtd-${id}`).innerText = novaQtd;
+        }
         atualizarBarraResumo();
     };
 
@@ -320,13 +338,11 @@
             }
         });
 
-        // Atualiza a contagem textual à esquerda
         const txtResumo = document.getElementById('texto-resumo');
         if (txtResumo) {
             txtResumo.innerText = totalItens === 0 ? "Nenhum item selecionado" : `${totalItens} item(ns) selecionado(s)`;
         }
 
-        // Atualiza o valor monetário à direita (Total em verde)
         const txtPrecoTotal = document.getElementById('container-preco-total');
         if (txtPrecoTotal) {
             txtPrecoTotal.innerHTML = `<span>Total:</span> R$ ${valorTotalAcumulado.toFixed(2)}`;
@@ -336,40 +352,90 @@
     document.getElementById('btn-enviar-pedido').onclick = async function() {
         const itensDoPedido = [];
         let valorFinalPedido = 0;
+        const atualizacoesEstoque = {};
 
         try {
+            // Re-busca os dados mais frescos do banco de dados para evitar estouros assíncronos
             const snapshot = await get(ref(db, 'produtos'));
-            const produtos = snapshot.val();
+            const produtosNoBanco = snapshot.val() || {};
             
-            Object.keys(carrinhoLocal).forEach(id => {
-                const qtd = carrinhoLocal[id];
-                if (qtd > 0 && produtos && produtos[id]) {
-                    const precoProd = produtos[id].preco !== undefined ? parseFloat(produtos[id].preco) : 0;
-                    valorFinalPedido += (qtd * precoProd);
+            let estoqueValido = true;
+            let mensagemErroEstoque = "";
+
+            // Primeira passada: Validação rigorosa de saldo de estoque antes de qualquer alteração
+            const chavesCarrinho = Object.keys(carrinhoLocal);
+            for (let i = 0; i < chavesCarrinho.length; i++) {
+                const id = chavesCarrinho[i];
+                const qtdDesejada = carrinhoLocal[id];
+
+                if (qtdDesejada > 0) {
+                    const prodRef = produtosNoBanco[id];
+                    if (!prodRef) {
+                        estoqueValido = false;
+                        mensagemErroEstoque = "Um dos produtos do seu carrinho não existe mais no catálogo.";
+                        break;
+                    }
+
+                    const estoqueDisponivel = prodRef.estoque !== undefined ? parseInt(prodRef.estoque, 10) : 0;
+                    
+                    if (qtdDesejada > estoqueDisponivel) {
+                        estoqueValido = false;
+                        mensagemErroEstoque = `O produto "${prodRef.nome}" agora só possui ${estoqueDisponivel} unidades disponíveis. Reajuste seu pedido!`;
+                        break;
+                    }
+
+                    const precoProd = prodRef.preco !== undefined ? parseFloat(prodRef.preco) : 0;
+                    valorFinalPedido += (qtdDesejada * precoProd);
 
                     itensDoPedido.push({ 
-                        nome: produtos[id].nome, 
-                        quantidade: qtd,
+                        nome: prodRef.nome, 
+                        quantidade: qtdDesejada,
                         precoUnitario: precoProd
                     });
-                }
-            });
-            
-            if (itensDoPedido.length === 0) return alert("Carrinho vazio!");
 
-            await set(push(ref(db, 'pedidos')), {
+                    // Prepara a diminuição exata do estoque
+                    atualizacoesEstoque[`produtos/${id}/estoque`] = estoqueDisponivel - qtdDesejada;
+                }
+            }
+
+            if (!estoqueValido) {
+                alert(mensagemErroEstoque);
+                return;
+            }
+
+            if (itensDoPedido.length === 0) {
+                alert("Seu carrinho está vazio! Selecione as quantidades antes de enviar.");
+                return;
+            }
+
+            // Gera uma nova chave única no nó de pedidos
+            const novoPedidoRef = push(ref(db, 'pedidos'));
+            
+            // Dados completos do pedido para o Admin ver
+            const dadosDoPedido = {
                 clienteId: usuarioAtual ? usuarioAtual.uid : 'anonimo',
-                clienteNome: dadosClienteExtra ? dadosClienteExtra.nome : 'Não informado',
+                clienteNome: dadosClienteExtra && dadosClienteExtra.nome ? dadosClienteExtra.nome : (usuarioAtual ? usuarioAtual.email : 'Anônimo'),
                 data: new Date().toLocaleString('pt-BR'),
                 itens: itensDoPedido,
                 valorTotal: valorFinalPedido,
                 status: "Pendente"
-            });
+            };
+
+            // Executa a gravação do pedido e baixa os estoques de forma sincronizada
+            await set(novoPedidoRef, dadosDoPedido);
+            await update(ref(db), atualizacoesEstoque);
             
-            alert("Pedido enviado com sucesso! 🎉");
+            alert("Pedido enviado com sucesso e estoque atualizado! 🎉");
+            
+            // Zera o carrinho local
             Object.keys(carrinhoLocal).forEach(id => { carrinhoLocal[id] = 0; });
+            atualizarBarraResumo();
+            
             window.location.href = 'meus_pedidos.html';
-        } catch (e) { alert(e.message); }
+        } catch (e) { 
+            alert("Erro crítico ao processar transação: " + e.message); 
+            console.error(e);
+        }
     };
 
     document.getElementById('btn-sair').onclick = () => signOut(auth).then(() => window.location.href = 'index.html');
