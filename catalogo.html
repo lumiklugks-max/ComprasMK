@@ -11,6 +11,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
+            padding-bottom: 100px; /* Espaço para a barra inferior não cobrir os produtos */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -40,7 +41,6 @@
             width: 300px;
             overflow: hidden;
             text-align: left;
-            transition: transform 0.2s;
         }
         .card img {
             width: 100%;
@@ -80,15 +80,11 @@
             font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
         }
         .btn-add:hover {
             background-color: #00b4db;
         }
-        /* Rodapé de Confirmação */
+        /* BARRA INFERIOR DO CARRINHO VOLTANDO A MOSTRAR OS ITENS */
         .footer-cart {
             position: fixed;
             bottom: 0;
@@ -99,15 +95,26 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-top: 1px solid #333;
+            border-top: 2px solid #00d2ff;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+        }
+        .cart-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .cart-items-list {
+            font-size: 13px;
+            color: #00d2ff;
+            max-height: 40px;
+            overflow-y: auto;
         }
         .total-box {
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: bold;
         }
         .total-box span {
             color: #00ff66;
-            font-size: 18px;
-            font-weight: bold;
         }
         .btn-confirm {
             background-color: #00d2ff;
@@ -124,57 +131,51 @@
 <body>
 
     <h1>🛒 Nosso Catálogo Comercial</h1>
-    <p class="subtitle">Escolha seus itens favoritos e faça seus pedidos diretamente em nosso sistema</p>
+    <p class="subtitle">Escolha seus itens favoritos e defina a quantidade desejada abaixo</p>
 
     <div class="container" id="catalogo-container">
         <p id="loading-text">Buscando produtos no banco de dados...</p>
     </div>
 
     <div class="footer-cart">
-        <div class="total-box">
-            <div id="cart-status">Nenhum item selecionado</div>
-            <div>Total: <span id="cart-total">R$ 0,00</span></div>
+        <div class="cart-details">
+            <div class="total-box">Total: <span id="cart-total">R$ 0,00</span></div>
+            <div class="cart-items-list" id="cart-items-summary">Nenhum item selecionado</div>
         </div>
         <button class="btn-confirm" id="btn-confirmar">Confirmar Pedido 🚀</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, get, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, onValue, get, runTransaction, push, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // CONFIGURAÇÃO DO SEU FIREBASE (Substitua pelos dados do seu console se necessário)
+        // Substitua pelas chaves do seu projeto se necessário
         const firebaseConfig = {
-            apiKey: "SUA_API_KEY_AQUI",
             authDomain: "comprasmk-241ae.firebaseapp.com",
             databaseURL: "https://comprasmk-241ae-default-rtdb.firebaseio.com",
             projectId: "comprasmk-241ae",
-            storageBucket: "comprasmk-241ae.appspot.com",
-            messagingSenderId: "SEU_SENDER_ID",
-            appId: "SEU_APP_ID"
+            storageBucket: "comprasmk-241ae.appspot.com"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Estado local do carrinho do usuário (Controla o item ativo)
-        let carrinhoAtivo = {
-            produtoId: null,
-            quantidade: 0,
-            precoUnitario: 0
-        };
+        // Estrutura interna para guardar múltiplos produtos selecionados na sessão atual
+        let carrinho = {}; 
+        let listaProdutosBanco = {}; // Cópia local para validações rápidas
 
         const catalogoContainer = document.getElementById("catalogo-container");
-        const cartStatus = document.getElementById("cart-status");
         const cartTotal = document.getElementById("cart-total");
+        const cartItemsSummary = document.getElementById("cart-items-summary");
 
-        // 1. CARREGAR E RENDERIZAR PRODUTOS EM TEMPO REAL
+        // 1. CARREGA PRODUTOS E ATUALIZA A TELA SEMPRE QUE MUDAR NO FIREBASE
         onValue(ref(db, "produtos"), (snapshot) => {
             if (snapshot.exists()) {
-                catalogoContainer.innerHTML = ""; // Limpa o carregando...
-                const produtos = snapshot.val();
+                catalogoContainer.innerHTML = "";
+                listaProdutosBanco = snapshot.val();
 
-                Object.keys(produtos).forEach((id) => {
-                    const prod = produtos[id];
+                Object.keys(listaProdutosBanco).forEach((id) => {
+                    const prod = listaProdutosBanco[id];
                     
                     const card = document.createElement("div");
                     card.className = "card";
@@ -185,92 +186,104 @@
                             <p>${prod.descricao || ''}</p>
                             <div class="price">R$ ${prod.preco.toFixed(2).replace('.', ',')}</div>
                             <div class="stock">Disponível: ${prod.estoque} unidades</div>
-                            <button class="btn-add" onclick="adicionarAoCarrinho('${id}', ${prod.preco})">
+                            <button class="btn-add" onclick="adicionarProduto('${id}')">
                                 🛒 Adicionar ao Pedido
                             </button>
                         </div>
                     `;
                     catalogoContainer.appendChild(card);
                 });
+                atualizarInterfaceCarrinho();
             } else {
-                catalogoContainer.innerHTML = "<p>Nenhum produto cadastrado no Firebase.</p>";
+                catalogoContainer.innerHTML = "<p>Nenhum produto no banco.</p>";
             }
         });
 
-        // REGRA 1: VALIDAR ESTOQUE ANTES DE ADICIONAR AO CARRINHO
-        window.adicionarAoCarrinho = async function(produtoId, preco) {
-            try {
-                const snapshot = await get(ref(db, `produtos/${produtoId}`));
-                if (!snapshot.exists()) return;
+        // REGRA 1: ADICIONAR AO CARRINHO COM VALIDAÇÃO DE ESTOQUE ATIVA
+        window.adicionarProduto = function(produtoId) {
+            const produtoInfo = listaProdutosBanco[produtoId];
+            if (!produtoInfo) return;
 
-                const produto = snapshot.val();
-                const estoqueAtual = produto.estoque || 0;
+            const estoqueDisponivel = produtoInfo.estoque || 0;
 
-                // Validação de estoque esgotado / zerado
-                if (estoqueAtual <= 0) {
-                    alert("Desculpe, este produto está totalmente esgotado!");
-                    return;
-                }
-
-                // Simulação simples: adicionando 1 unidade por clique
-                const novaQuantidade = (carrinhoAtivo.produtoId === produtoId ? carrinhoAtivo.quantidade : 0) + 1;
-
-                if (novaQuantidade > estoqueAtual) {
-                    alert(`Limite atingido! Só existem ${estoqueAtual} unidades em estoque.`);
-                    return;
-                }
-
-                // Atualiza o estado do carrinho na interface
-                carrinhoAtivo.produtoId = produtoId;
-                carrinhoAtivo.quantidade = novaQuantidade;
-                carrinhoAtivo.precoUnitario = preco;
-
-                const valorTotal = carrinhoAtivo.quantidade * carrinhoAtivo.precoUnitario;
-                cartStatus.innerText = `${carrinhoAtivo.quantidade}x Item Selecionado`;
-                cartTotal.innerText = `R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
-
-            } catch (error) {
-                console.error("Erro ao processar estoque:", error);
-            }
-        };
-
-        // REGRA 2: SUBTRAIR ESTOQUE DO BANCO AO CONFIRMAR PEDIDO
-        document.getElementById("btn-confirmar").addEventListener("click", () => {
-            if (!carrinhoAtivo.produtoId || carrinhoAtivo.quantidade === 0) {
-                alert("Adicione pelo menos um item ao pedido antes de confirmar!");
+            if (estoqueDisponivel <= 0) {
+                alert("Aviso: Este produto está totalmente esgotado!");
                 return;
             }
 
-            const produtoId = carrinhoAtivo.produtoId;
-            const qtdComprada = carrinhoAtivo.quantidade;
-            const estoqueRef = ref(db, `produtos/${produtoId}/estoque`);
+            const quantidadeAtualNoCarrinho = carrinho[produtoId] ? carrinho[produtoId].quantidade : 0;
+            const novaQuantidade = quantidadeAtualNoCarrinho + 1;
 
-            // Executa a transação segura para diminuir o estoque
-            runTransaction(estoqueRef, (currentEstoque) => {
-                if (currentEstoque === null) return 0;
-                const novoEstoque = currentEstoque - qtdComprada;
-                return novoEstoque < 0 ? 0 : novoEstoque;
-            })
-            .then(() => {
-                alert("Pedido confirmado com sucesso! Estoque atualizado.");
-                // Limpa o carrinho após o sucesso
-                carrinhoAtivo = { produtoId: null, quantidade: 0, precoUnitario: 0 };
-                cartStatus.innerText = "Nenhum item selecionado";
-                cartTotal.innerText = "R$ 0,00";
-            })
-            .catch((error) => {
-                console.error("Erro ao decrementar estoque:", error);
-            });
-        });
+            if (novaQuantidade > estoqueDisponivel) {
+                alert(`Quantidade limite atingida! Só existem ${estoqueDisponivel} unidades disponíveis.`);
+                return;
+            }
 
-        // REGRA 3: LIMPAR ITENS / ZERAR SELEÇÃO ATUAL
-        // Permite ao usuário resetar a seleção atual do catálogo antes do envio
-        window.limparSelecaoAtual = function() {
-            carrinhoAtivo = { produtoId: null, quantidade: 0, precoUnitario: 0 };
-            cartStatus.innerText = "Nenhum item selecionado";
-            cartTotal.innerText = "R$ 0,00";
-            alert("Seleção limpa!");
+            // Grava ou incrementa o item no objeto do carrinho
+            carrinho[produtoId] = {
+                nome: produtoInfo.nome,
+                quantidade: novaQuantidade,
+                precoUnitario: produtoInfo.preco
+            };
+
+            atualizarInterfaceCarrinho();
         };
-    </script>
-</body>
-</html>
+
+        // ATUALIZA A LISTAGEM VISUAL DE PRODUTOS SELECIONADOS NO RODAPÉ
+        function atualizarInterfaceCarrinho() {
+            const chaves = Object.keys(carrinho);
+            
+            if (chaves.length === 0) {
+                cartItemsSummary.innerText = "Nenhum item selecionado";
+                cartTotal.innerText = "R$ 0,00";
+                return;
+            }
+
+            let textoResumo = "Selecionados: ";
+            let valorTotalGeral = 0;
+
+            chaves.forEach((id) => {
+                const item = carrinho[id];
+                textoResumo += `[${item.quantidade}x ${item.nome}] `;
+                valorTotalGeral += item.quantidade * item.precoUnitario;
+            });
+
+            cartItemsSummary.innerText = textoResumo;
+            cartTotal.innerText = `R$ ${valorTotalGeral.toFixed(2).replace('.', ',')}`;
+        }
+
+        // REGRA 2: CONFIRMAR COMPRA, GRAVAR PEDIDO E REDUZIR CADA ESTOQUE NO FIREBASE
+        document.getElementById("btn-confirmar").addEventListener("click", async () => {
+            const itensIds = Object.keys(carrinho);
+            if (itensIds.length === 0) {
+                alert("Seu carrinho está vazio! Selecione produtos antes de confirmar.");
+                return;
+            }
+
+            try {
+                // 1. Gera e salva o novo pedido dentro do nó 'pedidos' do Firebase
+                const novosPedidosRef = ref(db, "pedidos");
+                const novoPedidoIdRef = push(novosPedidosRef);
+                
+                let valorTotalGeral = 0;
+                let itensParaSalvar = {};
+
+                itensIds.forEach((id) => {
+                    const item = carrinho[id];
+                    valorTotalGeral += item.quantidade * item.precoUnitario;
+                    itensParaSalvar[id] = {
+                        quantidade: item.quantidade,
+                        precoUnitario: item.precoUnitario
+                    };
+                });
+
+                await set(novoPedidoIdRef, {
+                    itens: itensParaSalvar,
+                    total: valorTotalGeral,
+                    status: "pendente",
+                    data: new Date().toISOString()
+                });
+
+                // 2. Diminui o estoque correspondente de cada produto comprado via runTransaction
+                for (const id of itensIds) {
+                    const qtdComprada = carrinho
