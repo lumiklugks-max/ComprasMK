@@ -10,28 +10,53 @@
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
-            padding-bottom: 100px; /* Espaço para a barra inferior não cobrir os produtos */
+            padding: 0;
+            padding-bottom: 120px; /* Espaço para o rodapé */
+        }
+        /* BARRA SUPERIOR ORIGINAL DE NAVEGAÇÃO */
+        .navbar {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
+            padding: 15px 30px;
+            background-color: #121212;
+            border-bottom: 1px solid #222;
         }
-        h1 {
+        .user-status {
+            font-size: 14px;
+            color: #aaaaaa;
+        }
+        .nav-buttons a {
+            text-decoration: none;
+            font-weight: bold;
+            margin-left: 15px;
+            font-size: 14px;
+        }
+        .btn-pedidos { color: #00d2ff; }
+        .btn-sair { color: #ff4d4d; }
+
+        header {
+            text-align: center;
+            margin: 40px 0 20px 0;
+        }
+        header h1 {
             color: #00d2ff;
-            margin-bottom: 5px;
+            margin: 0 0 5px 0;
         }
-        p.subtitle {
+        header p {
             color: #aaaaaa;
             font-size: 14px;
-            margin-top: 0;
-            margin-bottom: 30px;
+            margin: 0;
         }
+
+        /* CONTEÚDO E CARDS */
         .container {
             max-width: 1200px;
-            width: 100%;
+            margin: 0 auto;
+            padding: 0 20px;
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 25px;
             flex-wrap: wrap;
         }
         .card {
@@ -53,18 +78,20 @@
         .card h3 {
             margin: 0 0 10px 0;
             font-size: 18px;
+            color: #ffffff;
         }
         .card p {
             color: #c5c6c7;
             font-size: 13px;
             height: 40px;
             overflow: hidden;
+            margin: 0 0 15px 0;
         }
         .price {
             color: #00ff66;
             font-size: 20px;
             font-weight: bold;
-            margin: 15px 0 5px 0;
+            margin-bottom: 5px;
         }
         .stock {
             color: #888888;
@@ -80,41 +107,43 @@
             font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
+            transition: background 0.2s;
         }
-        .btn-add:hover {
-            background-color: #00b4db;
-        }
-        /* BARRA INFERIOR DO CARRINHO VOLTANDO A MOSTRAR OS ITENS */
+        .btn-add:hover { background-color: #00b4db; }
+
+        /* RODAPÉ DO CARRINHO ORIGINAL E DINÂMICO */
         .footer-cart {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
             background-color: #121212;
-            padding: 15px 30px;
+            padding: 20px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-top: 2px solid #00d2ff;
             box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+            z-index: 1000;
         }
-        .cart-details {
+        .cart-info {
             display: flex;
             flex-direction: column;
             gap: 5px;
         }
-        .cart-items-list {
+        .cart-summary {
             font-size: 13px;
             color: #00d2ff;
-            max-height: 40px;
-            overflow-y: auto;
+            font-style: italic;
         }
         .total-box {
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 15px;
+            color: #ffffff;
         }
         .total-box span {
             color: #00ff66;
+            font-size: 18px;
+            font-weight: bold;
         }
         .btn-confirm {
             background-color: #00d2ff;
@@ -126,21 +155,37 @@
             cursor: pointer;
             font-size: 15px;
         }
+        .btn-confirm:hover { background-color: #00b4db; }
+        
+        #loading-text {
+            color: #aaaaaa;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
 
-    <h1>🛒 Nosso Catálogo Comercial</h1>
-    <p class="subtitle">Escolha seus itens favoritos e defina a quantidade desejada abaixo</p>
+    <div class="navbar">
+        <div class="user-status">Acessando Catálogo... 👋</div>
+        <div class="nav-buttons">
+            <a href="meus_pedidos.html" class="btn-pedidos">📋 Meus Pedidos</a>
+            <a href="index.html" class="btn-sair">Sair</a>
+        </div>
+    </div>
+
+    <header>
+        <h1>🛍️ Nosso Catálogo</h1>
+        <p>Escolha os itens desejados e defina a quantidade abaixo</p>
+    </header>
 
     <div class="container" id="catalogo-container">
         <p id="loading-text">Buscando produtos no banco de dados...</p>
     </div>
 
     <div class="footer-cart">
-        <div class="cart-details">
+        <div class="cart-info">
+            <div class="cart-summary" id="cart-items-summary">Nenhum item selecionado</div>
             <div class="total-box">Total: <span id="cart-total">R$ 0,00</span></div>
-            <div class="cart-items-list" id="cart-items-summary">Nenhum item selecionado</div>
         </div>
         <button class="btn-confirm" id="btn-confirmar">Confirmar Pedido 🚀</button>
     </div>
@@ -149,8 +194,11 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, get, runTransaction, push, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Substitua pelas chaves do seu projeto se necessário
+        // =========================================================================
+        // IMPORTANTE: Insira aqui as credenciais exatas que estão no seu arquivo meus_pedidos.html
+        // =========================================================================
         const firebaseConfig = {
+            apiKey: "SUA_API_KEY",
             authDomain: "comprasmk-241ae.firebaseapp.com",
             databaseURL: "https://comprasmk-241ae-default-rtdb.firebaseio.com",
             projectId: "comprasmk-241ae",
@@ -160,22 +208,21 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Estrutura interna para guardar múltiplos produtos selecionados na sessão atual
         let carrinho = {}; 
-        let listaProdutosBanco = {}; // Cópia local para validações rápidas
+        let produtosDoBanco = {}; 
 
         const catalogoContainer = document.getElementById("catalogo-container");
         const cartTotal = document.getElementById("cart-total");
         const cartItemsSummary = document.getElementById("cart-items-summary");
 
-        // 1. CARREGA PRODUTOS E ATUALIZA A TELA SEMPRE QUE MUDAR NO FIREBASE
+        // BUSCA E ESCUTA A LISTA DE PRODUTOS DO FIREBASE
         onValue(ref(db, "produtos"), (snapshot) => {
             if (snapshot.exists()) {
                 catalogoContainer.innerHTML = "";
-                listaProdutosBanco = snapshot.val();
+                produtosDoBanco = snapshot.val();
 
-                Object.keys(listaProdutosBanco).forEach((id) => {
-                    const prod = listaProdutosBanco[id];
+                Object.keys(produtosDoBanco).forEach((id) => {
+                    const prod = produtosDoBanco[id];
                     
                     const card = document.createElement("div");
                     card.className = "card";
@@ -195,95 +242,119 @@
                 });
                 atualizarInterfaceCarrinho();
             } else {
-                catalogoContainer.innerHTML = "<p>Nenhum produto no banco.</p>";
+                catalogoContainer.innerHTML = "<p>Nenhum produto cadastrado na tabela 'produtos' do Firebase.</p>";
             }
         });
 
-        // REGRA 1: ADICIONAR AO CARRINHO COM VALIDAÇÃO DE ESTOQUE ATIVA
+        // REGRA 1: ADICIONAR VALIDANDO SALDO/ESTOQUE
         window.adicionarProduto = function(produtoId) {
-            const produtoInfo = listaProdutosBanco[produtoId];
-            if (!produtoInfo) return;
+            const produto = produtosDoBanco[produtoId];
+            if (!produto) return;
 
-            const estoqueDisponivel = produtoInfo.estoque || 0;
+            const estoqueLivre = produto.estoque || 0;
 
-            if (estoqueDisponivel <= 0) {
-                alert("Aviso: Este produto está totalmente esgotado!");
+            if (estoqueLivre <= 0) {
+                alert("Aviso: Saldo zerado! Este item está completamente esgotado.");
                 return;
             }
 
-            const quantidadeAtualNoCarrinho = carrinho[produtoId] ? carrinho[produtoId].quantidade : 0;
-            const novaQuantidade = quantidadeAtualNoCarrinho + 1;
+            const qtdNoCarrinho = carrinho[produtoId] ? carrinho[produtoId].quantidade : 0;
+            const novaQtd = qtdNoCarrinho + 1;
 
-            if (novaQuantidade > estoqueDisponivel) {
-                alert(`Quantidade limite atingida! Só existem ${estoqueDisponivel} unidades disponíveis.`);
+            if (novaQtd > estoqueLivre) {
+                alert(`Falta de estoque! Só restam ${estoqueLivre} unidades deste item.`);
                 return;
             }
 
-            // Grava ou incrementa o item no objeto do carrinho
             carrinho[produtoId] = {
-                nome: produtoInfo.nome,
-                quantidade: novaQuantidade,
-                precoUnitario: produtoInfo.preco
+                nome: produto.nome,
+                quantidade: novaQtd,
+                precoUnitario: produto.preco
             };
 
             atualizarInterfaceCarrinho();
         };
 
-        // ATUALIZA A LISTAGEM VISUAL DE PRODUTOS SELECIONADOS NO RODAPÉ
+        // MOSTRA COMPRA SELECIONADA ATUALIZADA EM TEMPO REAL NO RODAPÉ
         function atualizarInterfaceCarrinho() {
-            const chaves = Object.keys(carrinho);
+            const itensIds = Object.keys(carrinho);
             
-            if (chaves.length === 0) {
+            if (itensIds.length === 0) {
                 cartItemsSummary.innerText = "Nenhum item selecionado";
                 cartTotal.innerText = "R$ 0,00";
                 return;
             }
 
-            let textoResumo = "Selecionados: ";
-            let valorTotalGeral = 0;
+            let resumoTexto = "No carrinho: ";
+            let totalAcumulado = 0;
 
-            chaves.forEach((id) => {
+            itensIds.forEach((id) => {
                 const item = carrinho[id];
-                textoResumo += `[${item.quantidade}x ${item.nome}] `;
-                valorTotalGeral += item.quantidade * item.precoUnitario;
+                resumoTexto += `${item.quantidade}x ${item.nome} | `;
+                totalAcumulado += item.quantidade * item.precoUnitario;
             });
 
-            cartItemsSummary.innerText = textoResumo;
-            cartTotal.innerText = `R$ ${valorTotalGeral.toFixed(2).replace('.', ',')}`;
+            // Corta a última barra vertical sobressalente
+            cartItemsSummary.innerText = resumoTexto.slice(0, -3);
+            cartTotal.innerText = `R$ ${totalAcumulado.toFixed(2).replace('.', ',')}`;
         }
 
-        // REGRA 2: CONFIRMAR COMPRA, GRAVAR PEDIDO E REDUZIR CADA ESTOQUE NO FIREBASE
+        // REGRA 2: ENVIAR PEDIDO E REDUZIR QUANTIDADES DO ESTOQUE
         document.getElementById("btn-confirmar").addEventListener("click", async () => {
             const itensIds = Object.keys(carrinho);
             if (itensIds.length === 0) {
-                alert("Seu carrinho está vazio! Selecione produtos antes de confirmar.");
+                alert("Adicione produtos antes de confirmar seu pedido.");
                 return;
             }
 
             try {
-                // 1. Gera e salva o novo pedido dentro do nó 'pedidos' do Firebase
-                const novosPedidosRef = ref(db, "pedidos");
-                const novoPedidoIdRef = push(novosPedidosRef);
+                // 1. Envia a estrutura da compra para a tabela 'pedidos' usada pelo seu meus_pedidos.html
+                const pedidosRef = ref(db, "pedidos");
+                const novoPedidoRef = push(pedidosRef);
                 
-                let valorTotalGeral = 0;
-                let itensParaSalvar = {};
+                let totalPedido = 0;
+                let itensSalvar = {};
 
                 itensIds.forEach((id) => {
                     const item = carrinho[id];
-                    valorTotalGeral += item.quantidade * item.precoUnitario;
-                    itensParaSalvar[id] = {
+                    totalPedido += item.whitespace * item.precoUnitario; // Conta base do total
+                    totalPedido += item.quantidade * item.precoUnitario;
+                    
+                    itensSalvar[id] = {
                         quantidade: item.quantidade,
-                        precoUnitario: item.precoUnitario
+                        precoUnitario: item.precoUnitario,
+                        nome: item.nome
                     };
                 });
 
-                await set(novoPedidoIdRef, {
-                    itens: itensParaSalvar,
-                    total: valorTotalGeral,
+                await set(novoPedidoRef, {
+                    itens: itensSalvar,
+                    total: totalPedido,
                     status: "pendente",
-                    data: new Date().toISOString()
+                    data: new Date().toLocaleString('pt-BR')
                 });
 
-                // 2. Diminui o estoque correspondente de cada produto comprado via runTransaction
+                // 2. Transação que subtrai o estoque de cada item comprado
                 for (const id of itensIds) {
-                    const qtdComprada = carrinho
+                    const qtdComprada = carrinho[id].quantidade;
+                    const itemEstoqueRef = ref(db, `produtos/${id}/estoque`);
+
+                    await runTransaction(itemEstoqueRef, (currentEstoque) => {
+                        if (currentEstoque === null) return 0;
+                        const resultado = currentEstoque - qtdComprada;
+                        return resultado < 0 ? 0 : resultado;
+                    });
+                }
+
+                alert("Pedido realizado com sucesso! O estoque foi alterado.");
+                carrinho = {};
+                atualizarInterfaceCarrinho();
+
+            } catch (error) {
+                console.error("Erro ao registrar compra:", error);
+                alert("Falha ao salvar o pedido. Verifique sua conexão.");
+            }
+        });
+    </script>
+</body>
+</html>
