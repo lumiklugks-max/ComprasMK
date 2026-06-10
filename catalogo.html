@@ -11,9 +11,8 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            padding-bottom: 120px; /* Espaço para o rodapé */
+            padding-bottom: 120px;
         }
-        /* BARRA SUPERIOR ORIGINAL DE NAVEGAÇÃO */
         .navbar {
             display: flex;
             justify-content: space-between;
@@ -49,7 +48,6 @@
             margin: 0;
         }
 
-        /* CONTEÚDO E CARDS */
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -111,7 +109,6 @@
         }
         .btn-add:hover { background-color: #00b4db; }
 
-        /* RODAPÉ DO CARRINHO ORIGINAL E DINÂMICO */
         .footer-cart {
             position: fixed;
             bottom: 0;
@@ -156,11 +153,6 @@
             font-size: 15px;
         }
         .btn-confirm:hover { background-color: #00b4db; }
-        
-        #loading-text {
-            color: #aaaaaa;
-            font-style: italic;
-        }
     </style>
 </head>
 <body>
@@ -194,9 +186,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, get, runTransaction, push, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // =========================================================================
-        // IMPORTANTE: Insira aqui as credenciais exatas que estão no seu arquivo meus_pedidos.html
-        // =========================================================================
+        // Mantenha exatamente a sua chave do Firebase aqui
         const firebaseConfig = {
             apiKey: "SUA_API_KEY",
             authDomain: "comprasmk-241ae.firebaseapp.com",
@@ -215,7 +205,6 @@
         const cartTotal = document.getElementById("cart-total");
         const cartItemsSummary = document.getElementById("cart-items-summary");
 
-        // BUSCA E ESCUTA A LISTA DE PRODUTOS DO FIREBASE
         onValue(ref(db, "produtos"), (snapshot) => {
             if (snapshot.exists()) {
                 catalogoContainer.innerHTML = "";
@@ -242,11 +231,10 @@
                 });
                 atualizarInterfaceCarrinho();
             } else {
-                catalogoContainer.innerHTML = "<p>Nenhum produto cadastrado na tabela 'produtos' do Firebase.</p>";
+                catalogoContainer.innerHTML = "<p>Nenhum produto cadastrado.</p>";
             }
         });
 
-        // REGRA 1: ADICIONAR VALIDANDO SALDO/ESTOQUE
         window.adicionarProduto = function(produtoId) {
             const produto = produtosDoBanco[produtoId];
             if (!produto) return;
@@ -275,7 +263,6 @@
             atualizarInterfaceCarrinho();
         };
 
-        // MOSTRA COMPRA SELECIONADA ATUALIZADA EM TEMPO REAL NO RODAPÉ
         function atualizarInterfaceCarrinho() {
             const itensIds = Object.keys(carrinho);
             
@@ -294,12 +281,13 @@
                 totalAcumulado += item.quantidade * item.precoUnitario;
             });
 
-            // Corta a última barra vertical sobressalente
             cartItemsSummary.innerText = resumoTexto.slice(0, -3);
             cartTotal.innerText = `R$ ${totalAcumulado.toFixed(2).replace('.', ',')}`;
         }
 
-        // REGRA 2: ENVIAR PEDIDO E REDUZIR QUANTIDADES DO ESTOQUE
+        // ==========================================
+        // FUNÇÃO DE CONFIRMAR CORRIGIDA COMPLETA
+        // ==========================================
         document.getElementById("btn-confirmar").addEventListener("click", async () => {
             const itensIds = Object.keys(carrinho);
             if (itensIds.length === 0) {
@@ -308,16 +296,15 @@
             }
 
             try {
-                // 1. Envia a estrutura da compra para a tabela 'pedidos' usada pelo seu meus_pedidos.html
                 const pedidosRef = ref(db, "pedidos");
                 const novoPedidoRef = push(pedidosRef);
                 
                 let totalPedido = 0;
                 let itensSalvar = {};
 
+                // Loop limpo sem a linha errada que travava o código
                 itensIds.forEach((id) => {
                     const item = carrinho[id];
-                    totalPedido += item.whitespace * item.precoUnitario; // Conta base do total
                     totalPedido += item.quantidade * item.precoUnitario;
                     
                     itensSalvar[id] = {
@@ -327,6 +314,7 @@
                     };
                 });
 
+                // Salva na tabela do Firebase
                 await set(novoPedidoRef, {
                     itens: itensSalvar,
                     total: totalPedido,
@@ -334,7 +322,7 @@
                     data: new Date().toLocaleString('pt-BR')
                 });
 
-                // 2. Transação que subtrai o estoque de cada item comprado
+                // Atualiza o estoque decrementando as unidades compradas
                 for (const id of itensIds) {
                     const qtdComprada = carrinho[id].quantidade;
                     const itemEstoqueRef = ref(db, `produtos/${id}/estoque`);
