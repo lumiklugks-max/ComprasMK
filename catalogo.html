@@ -158,7 +158,7 @@
 <body>
 
     <div class="navbar">
-        <div class="user-status">Acessando Catálogo... 👋</div>
+        <div class="user-status" id="txt-user-email">Acessando Catálogo... 👋</div>
         <div class="nav-buttons">
             <a href="meus_pedidos.html" class="btn-pedidos">📋 Meus Pedidos</a>
             <a href="index.html" class="btn-sair">Sair</a>
@@ -184,9 +184,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, get, runTransaction, push, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, onValue, runTransaction, push, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // Mantenha exatamente a sua chave do Firebase aqui
         const firebaseConfig = {
             apiKey: "SUA_API_KEY",
             authDomain: "comprasmk-241ae.firebaseapp.com",
@@ -197,13 +197,27 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const auth = getAuth(app);
 
         let carrinho = {}; 
         let produtosDoBanco = {}; 
+        let emailUsuarioLogado = "usuario.anonimo@email.com";
 
         const catalogoContainer = document.getElementById("catalogo-container");
         const cartTotal = document.getElementById("cart-total");
         const cartItemsSummary = document.getElementById("cart-items-summary");
+        const txtUserEmail = document.getElementById("txt-user-email");
+
+        // Escuta o estado da autenticação para vincular o email ao pedido
+        onAuthStateChanged(auth, (user) => {
+            if (user && user.email) {
+                emailUsuarioLogado = user.email;
+                txtUserEmail.innerText = `Logado como: ${user.email} 👋`;
+            } else {
+                emailUsuarioLogado = "usuario.anonimo@email.com";
+                txtUserEmail.innerText = "Acessando Catálogo como Visitante... 👋";
+            }
+        });
 
         onValue(ref(db, "produtos"), (snapshot) => {
             if (snapshot.exists()) {
@@ -255,6 +269,7 @@
             }
 
             carrinho[produtoId] = {
+                id: produtoId,
                 nome: produto.nome,
                 quantidade: novaQtd,
                 precoUnitario: produto.preco
@@ -285,9 +300,6 @@
             cartTotal.innerText = `R$ ${totalAcumulado.toFixed(2).replace('.', ',')}`;
         }
 
-        // ==========================================
-        // FUNÇÃO DE CONFIRMAR CORRIGIDA COMPLETA
-        // ==========================================
         document.getElementById("btn-confirmar").addEventListener("click", async () => {
             const itensIds = Object.keys(carrinho);
             if (itensIds.length === 0) {
@@ -296,53 +308,4 @@
             }
 
             try {
-                const pedidosRef = ref(db, "pedidos");
-                const novoPedidoRef = push(pedidosRef);
-                
-                let totalPedido = 0;
-                let itensSalvar = {};
-
-                // Loop limpo sem a linha errada que travava o código
-                itensIds.forEach((id) => {
-                    const item = carrinho[id];
-                    totalPedido += item.quantidade * item.precoUnitario;
-                    
-                    itensSalvar[id] = {
-                        quantidade: item.quantidade,
-                        precoUnitario: item.precoUnitario,
-                        nome: item.nome
-                    };
-                });
-
-                // Salva na tabela do Firebase
-                await set(novoPedidoRef, {
-                    itens: itensSalvar,
-                    total: totalPedido,
-                    status: "pendente",
-                    data: new Date().toLocaleString('pt-BR')
-                });
-
-                // Atualiza o estoque decrementando as unidades compradas
-                for (const id of itensIds) {
-                    const qtdComprada = carrinho[id].quantidade;
-                    const itemEstoqueRef = ref(db, `produtos/${id}/estoque`);
-
-                    await runTransaction(itemEstoqueRef, (currentEstoque) => {
-                        if (currentEstoque === null) return 0;
-                        const resultado = currentEstoque - qtdComprada;
-                        return resultado < 0 ? 0 : resultado;
-                    });
-                }
-
-                alert("Pedido realizado com sucesso!");
-                carrinho = {};
-                atualizarInterfaceCarrinho();
-
-            } catch (error) {
-                console.error("Erro ao registrar compra:", error);
-                alert("Falha ao salvar o pedido. Verifique sua conexão.");
-            }
-        });
-    </script>
-</body>
-</html>
+                const pedidosRef = ref(db,
