@@ -308,4 +308,54 @@
             }
 
             try {
-                const pedidosRef = ref(db,
+                const pedidosRef = ref(db, "pedidos");
+                const novoPedidoRef = push(pedidosRef);
+                
+                let totalPedido = 0;
+                let itensSalvar = {};
+
+                itensIds.forEach((id) => {
+                    const item = carrinho[id];
+                    totalPedido += item.quantidade * item.precoUnitario;
+                    
+                    itensSalvar[id] = {
+                        id: id,
+                        quantidade: item.quantidade,
+                        precoUnitario: item.precoUnitario,
+                        nome: item.nome
+                    };
+                });
+
+                // Salva o pedido incluindo a chave email do comprador
+                await set(novoPedidoRef, {
+                    itens: itensSalvar,
+                    total: totalPedido,
+                    status: "pendente",
+                    email: emailUsuarioLogado,
+                    data: new Date().toLocaleString('pt-BR')
+                });
+
+                // Realiza o decremento inicial do estoque de forma atômica
+                for (const id of itensIds) {
+                    const qtdComprada = carrinho[id].quantidade;
+                    const itemEstoqueRef = ref(db, `produtos/${id}/estoque`);
+
+                    await runTransaction(itemEstoqueRef, (currentEstoque) => {
+                        if (currentEstoque === null) return 0;
+                        const resultado = currentEstoque - qtdComprada;
+                        return resultado < 0 ? 0 : resultado;
+                    });
+                }
+
+                alert("Pedido realizado com sucesso!");
+                carrinho = {};
+                atualizarInterfaceCarrinho();
+
+            } catch (error) {
+                console.error("Erro ao registrar compra:", error);
+                alert("Falha ao salvar o pedido. Verifique sua conexão.");
+            }
+        });
+    </script>
+</body>
+</html>
