@@ -156,7 +156,7 @@
             const pedido = pedidosLocais[pedidoId];
             if (!pedido) return;
 
-            if (confirm("Deseja mesmo cancelar este pedido? Seus itens reservados voltarão para o estoque disponível.")) {
+            if (confirm("Deseja mesmo cancelar este pedido?")) {
                 try {
                     if (pedido.itens) {
                         for (const itemKey of Object.keys(pedido.itens)) {
