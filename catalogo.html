@@ -3,189 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nosso Catálogo Comercial</title>
+    <title>Catálogo de Produtos</title>
     <style>
         body {
             background-color: #0b0c10;
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 0;
-            padding-bottom: 120px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+
+        /* BARRA SUPERIOR */
         .navbar {
+            max-width: 1000px;
+            width: 100%;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 30px;
-            background-color: #121212;
-            border-bottom: 1px solid #222;
+            margin-bottom: 20px;
         }
-        .user-status {
-            font-size: 14px;
-            color: #aaaaaa;
-        }
-        .nav-buttons a {
+        .navbar a {
             text-decoration: none;
             font-weight: bold;
-            margin-left: 15px;
             font-size: 14px;
-        }
-        .btn-pedidos { color: #00d2ff; }
-        .btn-sair { color: #ff4d4d; }
-
-        header {
-            text-align: center;
-            margin: 40px 0 20px 0;
-        }
-        header h1 {
             color: #00d2ff;
-            margin: 0 0 5px 0;
-        }
-        header p {
-            color: #aaaaaa;
-            font-size: 14px;
-            margin: 0;
         }
 
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: flex;
-            justify-content: center;
-            gap: 25px;
-            flex-wrap: wrap;
+            max-width: 1000px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
         }
-        .card {
+        @media (max-width: 800px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        /* SEÇÃO DE AVISO DE PEDIDO PENDENTE */
+        .aviso-pendente {
+            grid-column: span 2;
+            background-color: rgba(255, 165, 0, 0.15);
+            border: 1px solid #ffa500;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            display: none; /* Ativado via JS */
+        }
+        @media (max-width: 800px) {
+            .aviso-pendente { grid-column: span 1; flex-direction: column; gap: 10px; text-align: center; }
+        }
+        .aviso-text h4 { margin: 0 0 5px 0; color: #ffa500; }
+        .aviso-text p { margin: 0; font-size: 14px; color: #cccccc; }
+        .btn-editar-pedido {
+            background-color: #ffa500;
+            color: #000000;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-editar-pedido:hover { background-color: #cc8400; }
+
+        /* GRID DE PRODUTOS */
+        .produtos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .produto-card {
             background-color: #1f2833;
             border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            width: 300px;
-            overflow: hidden;
-            text-align: left;
+            padding: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid #2c3540;
         }
-        .card img {
+        .produto-img {
             width: 100%;
-            height: 200px;
+            height: 150px;
             object-fit: cover;
+            border-radius: 6px;
+            background-color: #0b0c10;
         }
-        .card-content {
-            padding: 20px;
-        }
-        .card h3 {
-            margin: 0 0 10px 0;
-            font-size: 18px;
-            color: #ffffff;
-        }
-        .card p {
-            color: #c5c6c7;
-            font-size: 13px;
-            height: 40px;
-            overflow: hidden;
-            margin: 0 0 15px 0;
-        }
-        .price {
-            color: #00ff66;
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .stock {
-            color: #888888;
-            font-size: 12px;
-            margin-bottom: 15px;
-        }
+        .produto-nome { font-size: 16px; margin: 10px 0 5px 0; font-weight: bold; }
+        .produto-desc { font-size: 12px; color: #aaaaaa; margin: 0 0 10px 0; min-height: 32px; }
+        .produto-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .produto-preco { color: #00ff66; font-weight: bold; font-size: 18px; }
+        .produto-estoque { font-size: 12px; color: #00d2ff; }
+        .produto-estoque.esgotado { color: #ff4d4d; }
         .btn-add {
             background-color: #00d2ff;
             color: #000000;
             border: none;
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             font-weight: bold;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             transition: background 0.2s;
         }
         .btn-add:hover { background-color: #00b4db; }
+        .btn-add:disabled { background-color: #333; color: #777; cursor: not-allowed; }
 
-        .footer-cart {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: #121212;
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 2px solid #00d2ff;
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
-            z-index: 1000;
+        /* CAIXA DO CARRINHO */
+        .carrinho-box {
+            background-color: #1f2833;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            height: fit-content;
+            border: 1px solid #2c3540;
         }
-        .cart-info {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .cart-summary {
-            font-size: 13px;
-            color: #00d2ff;
-            font-style: italic;
-        }
-        .total-box {
-            font-size: 15px;
-            color: #ffffff;
-        }
-        .total-box span {
-            color: #00ff66;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        .btn-confirm {
-            background-color: #00d2ff;
-            color: #000000;
-            border: none;
-            padding: 12px 40px;
-            font-weight: bold;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 15px;
-        }
-        .btn-confirm:hover { background-color: #00b4db; }
+        .carrinho-box h3 { margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .carrinho-itens { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; max-height: 250px; overflow-y: auto; }
+        .carrinho-item { display: flex; justify-content: space-between; font-size: 14px; background: #0b0c10; padding: 8px; border-radius: 4px; }
+        .btn-remover-item { background: none; border: none; color: #ff4d4d; cursor: pointer; font-weight: bold; }
+        .carrinho-total { display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; margin-top: 15px; border-top: 1px solid #333; padding-top: 10px; color: #00ff66; }
+        
+        /* FORMULÁRIO DE CHECKOUT */
+        .checkout-form { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        .checkout-form input { background-color: #0b0c10; border: 1px solid #45f3ff33; border-radius: 6px; padding: 10px; color: #ffffff; outline: none; }
+        .checkout-form input:focus { border-color: #00d2ff; }
+        .btn-finalizar { background-color: #00ff66; color: #000000; border: none; padding: 12px; font-weight: bold; font-size: 15px; border-radius: 6px; cursor: pointer; transition: background 0.2s; margin-top: 5px; }
+        .btn-finalizar:hover { background-color: #00cc55; }
     </style>
 </head>
 <body>
 
     <div class="navbar">
-        <div class="user-status" id="txt-user-email">Acessando Catálogo... 👋</div>
-        <div class="nav-buttons">
-            <a href="meus_pedidos.html" class="btn-pedidos">📋 Meus Pedidos</a>
-            <a href="index.html" class="btn-sair">Sair</a>
-        </div>
+        <h2>🛒 Catálogo de Compras</h2>
+        <a href="admin_pedidos.html">⚙️ Acesso Administrativo</a>
     </div>
 
-    <header>
-        <h1>🛍️ Nosso Catálogo</h1>
-        <p>Escolha os itens desejados e defina a quantidade abaixo</p>
-    </header>
-
-    <div class="container" id="catalogo-container">
-        <p id="loading-text">Buscando produtos no banco de dados...</p>
-    </div>
-
-    <div class="footer-cart">
-        <div class="cart-info">
-            <div class="cart-summary" id="cart-items-summary">Nenhum item selecionado</div>
-            <div class="total-box">Total: <span id="cart-total">R$ 0,00</span></div>
+    <div class="container">
+        
+        <div id="aviso-pendente" class="aviso-pendente">
+            <div class="aviso-text">
+                <h4>⚠️ Você possui um pedido PENDENTE!</h4>
+                <p id="aviso-pedido-info">Deseja recuperar os itens e modificar o seu pedido atual?</p>
+            </div>
+            <button class="btn-editar-pedido" id="btn-reabrir-pedido">✏️ Editar Meu Pedido</button>
         </div>
-        <button class="btn-confirm" id="btn-confirmar">Confirmar Pedido 🚀</button>
+
+        <div>
+            <div id="produtos-grid" class="produtos-grid">
+                <p>Carregando catálogo de produtos...</p>
+            </div>
+        </div>
+
+        <div class="carrinho-box">
+            <h3>🛍️ Meu Carrinho</h3>
+            <div id="carrinho-itens" class="carrinho-itens">
+                <p style="color: #888; font-size: 14px; text-align: center;">Seu carrinho está vazio.</p>
+            </div>
+            
+            <div class="carrinho-total">
+                <span>Total:</span>
+                <span id="carrinho-total-val">R$ 0,00</span>
+            </div>
+
+            <div class="checkout-form">
+                <label style="font-size: 12px; color: #aaa;">Informe seu e-mail para finalizar ou consultar pedidos:</label>
+                <input type="email" id="cliente-email" placeholder="seu-email@email.com" required>
+                <button class="btn-finalizar" id="btn-finalizar-compra">🚀 Enviar Pedido</button>
+            </div>
+        </div>
+
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, runTransaction, push, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getDatabase, ref, onValue, push, set, remove, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "SUA_API_KEY",
@@ -197,163 +196,285 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const auth = getAuth(app);
 
-        let carrinho = {}; 
-        let produtosDoBanco = {}; 
-        let emailUsuarioLogado = "usuario.anonimo@email.com";
+        // Estados locais da aplicação cliente
+        let produtosGlobais = {};
+        let carrinho = [];
+        let idPedidoPendenteEncontrado = null;
+        let dadosPedidoPendenteEncontrado = null;
 
-        const catalogoContainer = document.getElementById("catalogo-container");
-        const cartTotal = document.getElementById("cart-total");
-        const cartItemsSummary = document.getElementById("cart-items-summary");
-        const txtUserEmail = document.getElementById("txt-user-email");
+        const produtosGrid = document.getElementById("produtos-grid");
+        const carrinhoItensContainer = document.getElementById("carrinho-itens");
+        const carrinhoTotalVal = document.getElementById("carrinho-total-val");
+        const inputEmail = document.getElementById("cliente-email");
+        const avisoPendente = document.getElementById("aviso-pendente");
+        const avisoPedidoInfo = document.getElementById("aviso-pedido-info");
+        const btnReabrirPedido = document.getElementById("btn-reabrir-pedido");
 
-        // Escuta o estado da autenticação para vincular o email ao pedido
-        onAuthStateChanged(auth, (user) => {
-            if (user && user.email) {
-                emailUsuarioLogado = user.email;
-                txtUserEmail.innerText = `Logado como: ${user.email} 👋`;
-            } else {
-                emailUsuarioLogado = "usuario.anonimo@email.com";
-                txtUserEmail.innerText = "Acessando Catálogo como Visitante... 👋";
-            }
-        });
-
+        // --- 1. ESCUTA O BANCO DE PRODUTOS E ATUALIZA A TELA ---
         onValue(ref(db, "produtos"), (snapshot) => {
-            if (snapshot.exists()) {
-                catalogoContainer.innerHTML = "";
-                produtosDoBanco = snapshot.val();
-
-                Object.keys(produtosDoBanco).forEach((id) => {
-                    const prod = produtosDoBanco[id];
-                    
-                    const card = document.createElement("div");
-                    card.className = "card";
-                    card.innerHTML = `
-                        <img src="${prod.imagem || 'https://via.placeholder.com/300'}" alt="${prod.nome}">
-                        <div class="card-content">
-                            <h3>${prod.nome}</h3>
-                            <p>${prod.descricao || ''}</p>
-                            <div class="price">R$ ${prod.preco.toFixed(2).replace('.', ',')}</div>
-                            <div class="stock">Disponível: ${prod.estoque} unidades</div>
-                            <button class="btn-add" onclick="adicionarProduto('${id}')">
-                                🛒 Adicionar ao Pedido
-                            </button>
-                        </div>
-                    `;
-                    catalogoContainer.appendChild(card);
-                });
-                atualizarInterfaceCarrinho();
-            } else {
-                catalogoContainer.innerHTML = "<p>Nenhum produto cadastrado.</p>";
+            if (!snapshot.exists()) {
+                produtosGrid.innerHTML = "<p>Nenhum produto disponível no momento.</p>";
+                return;
             }
+            produtosGlobais = snapshot.val();
+            renderizarCatalogo();
         });
 
-        window.adicionarProduto = function(produtoId) {
-            const produto = produtosDoBanco[produtoId];
-            if (!produto) return;
+        function renderizarCatalogo() {
+            produtosGrid.innerHTML = "";
+            Object.keys(produtosGlobais).forEach(id => {
+                const prod = produtosGlobais[id];
+                const card = document.createElement("div");
+                card.className = "produto-card";
+                
+                const estoqueDisponivel = parseInt(prod.estoque || 0, 10);
+                const isEsgotado = estoqueDisponivel <= 0;
 
-            const estoqueLivre = produto.estoque || 0;
+                card.innerHTML = `
+                    <img src="${prod.imagem || 'https://via.placeholder.com/150'}" class="produto-img" alt="${prod.nome}">
+                    <div class="produto-nome">${prod.nome}</div>
+                    <div class="produto-desc">${prod.descricao || ''}</div>
+                    <div class="produto-meta">
+                        <span class="produto-preco">R$ ${parseFloat(prod.preco).toFixed(2).replace('.', ',')}</span>
+                        <span class="produto-estoque ${isEsgotado ? 'esgotado' : ''}">
+                            ${isEsgotado ? 'Esgotado' : `Estoque: ${estoqueDisponivel}`}
+                        </span>
+                    </div>
+                    <button class="btn-add" ${isEsgotado ? 'disabled' : ''} data-id="${id}">
+                        ${isEsgotado ? '❌ Indisponível' : '➕ Adicionar'}
+                    </button>
+                `;
 
-            if (estoqueLivre <= 0) {
-                alert("Aviso: Saldo zerado! Este item está completamente esgotado.");
-                return;
-            }
-
-            const qtdNoCarrinho = carrinho[produtoId] ? carrinho[produtoId].quantidade : 0;
-            const novaQtd = qtdNoCarrinho + 1;
-
-            if (novaQtd > estoqueLivre) {
-                alert(`Falta de estoque! Só restam ${estoqueLivre} unidades deste item.`);
-                return;
-            }
-
-            carrinho[produtoId] = {
-                id: produtoId,
-                nome: produto.nome,
-                quantidade: novaQtd,
-                precoUnitario: produto.preco
-            };
-
-            atualizarInterfaceCarrinho();
-        };
-
-        function atualizarInterfaceCarrinho() {
-            const itensIds = Object.keys(carrinho);
-            
-            if (itensIds.length === 0) {
-                cartItemsSummary.innerText = "Nenhum item selecionado";
-                cartTotal.innerText = "R$ 0,00";
-                return;
-            }
-
-            let resumoTexto = "No carrinho: ";
-            let totalAcumulado = 0;
-
-            itensIds.forEach((id) => {
-                const item = carrinho[id];
-                resumoTexto += `${item.quantidade}x ${item.nome} | `;
-                totalAcumulado += item.quantidade * item.precoUnitario;
+                if(!isEsgotado) {
+                    card.querySelector(".btn-add").addEventListener("click", () => adicionarAoCarrinho(id));
+                }
+                produtosGrid.appendChild(card);
             });
-
-            cartItemsSummary.innerText = resumoTexto.slice(0, -3);
-            cartTotal.innerText = `R$ ${totalAcumulado.toFixed(2).replace('.', ',')}`;
         }
 
-        document.getElementById("btn-confirmar").addEventListener("click", async () => {
-            const itensIds = Object.keys(carrinho);
-            if (itensIds.length === 0) {
-                alert("Adicione produtos antes de confirmar seu pedido.");
+        // --- 2. SISTEMA DE MONITORAMENTO DE PEDIDO PENDENTE DO CLIENTE ---
+        inputEmail.addEventListener("input", (e) => {
+            const emailDigitado = e.target.value.trim().toLowerCase();
+            if (emailDigitado.includes("@") && emailDigitado.includes(".")) {
+                verificarPedidoPendente(emailDigitado);
+            } else {
+                avisoPendente.style.display = "none";
+                idPedidoPendenteEncontrado = null;
+            }
+        });
+
+        function verificarPedidoPendente(email) {
+            onValue(ref(db, "pedidos"), (snapshot) => {
+                if (!snapshot.exists()) return;
+                
+                let achou = false;
+                const todosPedidos = snapshot.val();
+                
+                Object.keys(todosPedidos).forEach(id => {
+                    const p = todosPedidos[id];
+                    if (p.email && p.email.toLowerCase() === email && p.status === "pendente") {
+                        achou = true;
+                        idPedidoPendenteEncontrado = id;
+                        dadosPedidoPendenteEncontrado = p;
+                    }
+                });
+
+                if (achou) {
+                    avisoPedidoInfo.innerText = `Você possui o pedido código (${idPedidoPendenteEncontrado}) no valor de R$ ${dadosPedidoPendenteEncontrado.total.toFixed(2).replace('.',',')} aguardando aprovação.`;
+                    avisoPendente.style.display = "flex";
+                } else {
+                    avisoPendente.style.display = "none";
+                    idPedidoPendenteEncontrado = null;
+                }
+            }, { onlyOnce: true });
+        }
+
+        // --- 3. LÓGICA CRÍTICA: REABRIR E EDITAR PEDIDO PENDENTE ---
+        btnReabrirPedido.addEventListener("click", async () => {
+            if (!idPedidoPendenteEncontrado || !dadosPedidoPendenteEncontrado) return;
+
+            if (confirm("Ao editar, seu pedido atual pendente será cancelado, as quantidades voltarão para o estoque e os itens retornarão para o seu carrinho de compras para modificação. Continuar?")) {
+                
+                const itensDoPedido = dadosPedidoPendenteEncontrado.itens;
+                
+                // 1. Devolve os produtos de volta ao estoque via Transação Atômica
+                if (itensDoPedido) {
+                    for (const itemKey of Object.keys(itensDoPedido)) {
+                        const item = itensDoPedido[itemKey];
+                        const qtdRetorno = item.quantidade || 1;
+                        const produtoId = item.id || itemKey;
+
+                        const estoqueRef = ref(db, `produtos/${produtoId}/estoque`);
+                        await runTransaction(estoqueRef, (currentEstoque) => {
+                            if (currentEstoque === null) return currentEstoque;
+                            return currentEstoque + qtdRetorno;
+                        });
+
+                        // 2. Insere o item de volta no carrinho local do navegador do cliente
+                        carrinho.push({
+                            id: produtoId,
+                            nome: item.nome || itemKey,
+                            preco: item.precoUnitario || 0,
+                            quantidade: qtdRetorno
+                        });
+                    }
+                }
+
+                // 3. Deleta o registro do pedido pendente antigo do banco
+                await remove(ref(db, `pedidos/${idPedidoPendenteEncontrado}`));
+
+                alert("Pedido reaberto com sucesso! Seus itens antigos já estão no carrinho de compras abaixo.");
+                
+                // Reseta variáveis de verificação e atualiza a interface
+                avisoPendente.style.display = "none";
+                idPedidoPendenteEncontrado = null;
+                dadosPedidoPendenteEncontrado = null;
+                
+                atualizarCarrinhoVisual();
+            }
+        });
+
+        // --- 4. FUNÇÕES OPERACIONAIS DO CARRINHO ---
+        function adicionarAoCarrinho(id) {
+            const produto = produtosGlobais[id];
+            if (!produto) return;
+
+            const itemNoCarrinho = carrinho.find(item => item.id === id);
+            if (itemNoCarrinho) {
+                if (itemNoCarrinho.quantidade + 1 > produto.estoque) {
+                    alert("Desculpe, quantidade máxima atingida de acordo com nosso estoque disponível.");
+                    return;
+                }
+                itemNoCarrinho.quantidade += 1;
+            } else {
+                carrinho.push({
+                    id: id,
+                    nome: produto.nome,
+                    preco: produto.preco,
+                    quantidade: 1
+                });
+            }
+            atualizarCarrinhoVisual();
+        }
+
+        function removerDoCarrinho(id) {
+            carrinho = carrinho.filter(item => item.id !== id);
+            atualizarCarrinhoVisual();
+        }
+
+        function atualizarCarrinhoVisual() {
+            carrinhoItensContainer.innerHTML = "";
+            
+            if (carrinho.length === 0) {
+                carrinhoItensContainer.innerHTML = `<p style="color: #888; font-size: 14px; text-align: center;">Seu carrinho está vazio.</p>`;
+                carrinhoTotalVal.innerText = "R$ 0,00";
                 return;
             }
 
+            let somaTotal = 0;
+
+            carrinho.forEach(item => {
+                const totalItem = item.preco * item.quantidade;
+                somaTotal += totalItem;
+
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "carrinho-item";
+                itemDiv.innerHTML = `
+                    <div>
+                        <strong>${item.nome}</strong><br>
+                        <span style="color: #00d2ff;">${item.quantidade}x</span> R$ ${item.preco.toFixed(2).replace('.', ',')}
+                    </div>
+                    <button class="btn-remover-item" data-id="${item.id}">❌</button>
+                `;
+
+                itemDiv.querySelector(".btn-remover-item").addEventListener("click", () => removerDoCarrinho(item.id));
+                carrinhoItensContainer.appendChild(itemDiv);
+            });
+
+            carrinhoTotalVal.innerText = `R$ ${somaTotal.toFixed(2).replace('.', ',')}`;
+        }
+
+        // --- 5. FECHAMENTO E FINALIZAÇÃO DO PEDIDO (BAIXA NO ESTOQUE) ---
+        document.getElementById("btn-finalizar-compra").addEventListener("click", async () => {
+            const emailCliente = inputEmail.value.trim();
+            
+            if (!emailCliente || !emailCliente.includes("@")) {
+                alert("Por favor, preencha um e-mail válido para realizar a compra.");
+                return;
+            }
+
+            if (carrinho.length === 0) {
+                alert("Seu carrinho está vazio! Adicione produtos antes de enviar.");
+                return;
+            }
+
+            if (idPedidoPendenteEncontrado) {
+                alert("Você já possui um pedido pendente ativo associado a este e-mail. Clique no botão 'Editar Meu Pedido' no topo para alterá-lo.");
+                return;
+            }
+
+            // Diminui o estoque no Firebase usando transações individuais para garantir segurança de concorrência
+            let checkoutValido = true;
+            const itensObjetoPedido = {};
+            let faturamentoFinal = 0;
+
+            for (const item of carrinho) {
+                const estoqueRef = ref(db, `produtos/${item.id}/estoque`);
+                let erroEstoque = false;
+
+                await runTransaction(estoqueRef, (currentEstoque) => {
+                    if (currentEstoque === null) return currentEstoque;
+                    if (currentEstoque < item.quantidade) {
+                        erroEstoque = true;
+                        return currentEstoque; // Aborta alteração
+                    }
+                    return currentEstoque - item.quantidade;
+                });
+
+                if (erroEstoque) {
+                    alert(`Erro: O produto "${item.nome}" acabou de esgotar ou não possui quantidade suficiente em estoque.`);
+                    checkoutValido = false;
+                    break;
+                }
+
+                // Prepara o nó de itens formatado para o Firebase
+                itensObjetoPedido[item.id] = {
+                    nome: item.nome,
+                    quantidade: item.quantidade,
+                    precoUnitario: item.preco
+                };
+                faturamentoFinal += (item.preco * item.quantidade);
+            }
+
+            if (!checkoutValido) return; // Se falhou no estoque, cancela inserção
+
+            // Grava o pedido na pasta 'pedidos' do Realtime Database
             try {
                 const pedidosRef = ref(db, "pedidos");
                 const novoPedidoRef = push(pedidosRef);
-                
-                let totalPedido = 0;
-                let itensSalvar = {};
 
-                itensIds.forEach((id) => {
-                    const item = carrinho[id];
-                    totalPedido += item.quantidade * item.precoUnitario;
-                    
-                    itensSalvar[id] = {
-                        id: id,
-                        quantidade: item.quantidade,
-                        precoUnitario: item.precoUnitario,
-                        nome: item.nome
-                    };
-                });
+                const dataAtual = new Date();
+                const dataFormatada = dataAtual.toLocaleDateString('pt-BR') + ' ' + dataAtual.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
-                // Salva o pedido incluindo a chave email do comprador
                 await set(novoPedidoRef, {
-                    itens: itensSalvar,
-                    total: totalPedido,
+                    email: emailCliente.toLowerCase(),
+                    total: faturamentoFinal,
                     status: "pendente",
-                    email: emailUsuarioLogado,
-                    data: new Date().toLocaleString('pt-BR')
+                    data: dataFormatada,
+                    itens: itensObjetoPedido
                 });
 
-                // Realiza o decremento inicial do estoque de forma atômica
-                for (const id of itensIds) {
-                    const qtdComprada = carrinho[id].quantidade;
-                    const itemEstoqueRef = ref(db, `produtos/${id}/estoque`);
-
-                    await runTransaction(itemEstoqueRef, (currentEstoque) => {
-                        if (currentEstoque === null) return 0;
-                        const resultado = currentEstoque - qtdComprada;
-                        return resultado < 0 ? 0 : resultado;
-                    });
-                }
-
-                alert("Pedido realizado com sucesso!");
-                carrinho = {};
-                atualizarInterfaceCarrinho();
+                alert("Pedido enviado com sucesso! Aguarde a aprovação do administrador.");
+                
+                // Limpa carrinho e formulário local
+                carrinho = [];
+                atualizarCarrinhoVisual();
+                inputEmail.value = "";
 
             } catch (error) {
-                console.error("Erro ao registrar compra:", error);
-                alert("Falha ao salvar o pedido. Verifique sua conexão.");
+                console.error("Erro ao registrar venda:", error);
+                alert("Ocorreu um problema ao processar seu checkout no banco.");
             }
         });
     </script>
