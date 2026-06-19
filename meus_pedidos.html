@@ -105,9 +105,9 @@
         .status-tag.cancelado { background-color: rgba(255,77,77,0.2); color: #ff4d4d; }
 
         .item-linha {
-            font-size: 14px;
+            font-size: 15px;
             color: #ccc;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
         .pedido-footer {
@@ -117,6 +117,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .btn-acao-container {
@@ -132,8 +134,21 @@
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
+            transition: 0.2s;
         }
         .btn-cancelar:hover { background-color: #ff4d4d; color: black; }
+
+        .btn-editar {
+            background-color: rgba(255, 165, 0, 0.1);
+            color: #ffa500;
+            border: 1px solid #ffa500;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .btn-editar:hover { background-color: #ffa500; color: black; }
     </style>
 </head>
 <body>
@@ -154,7 +169,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, onValue, remove, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "SUA_API_KEY",
@@ -172,22 +187,32 @@
         const btnBuscar = document.getElementById("btn-buscar");
         const inputEmail = document.getElementById("busca-email");
 
+        // Mantém o e-mail preenchido se o usuário já buscou antes nesta sessão
+        if(localStorage.getItem("email_logado")) {
+            inputEmail.value = localStorage.getItem("email_logado");
+            ouvirPedidosDoBanco(inputEmail.value);
+        }
+
         btnBuscar.addEventListener("click", () => {
             const email = inputEmail.value.trim().toLowerCase();
             if(!email || !email.includes("@")) {
                 alert("Insira um e-mail válido.");
                 return;
             }
+            localStorage.setItem("email_logado", email);
+            ouvirPedidosDoBanco(email);
+        });
 
+        function ouvirPedidosDoBanco(emailCliente) {
             onValue(ref(db, "pedidos"), (snapshot) => {
                 if(snapshot.exists()) {
                     todosPedidos = snapshot.val();
-                    renderizarPedidosDoCliente(email);
+                    renderizarPedidosDoCliente(emailCliente);
                 } else {
                     container.innerHTML = "<p style='text-align: center; color:#666;'>Nenhum registro encontrado.</p>";
                 }
             });
-        });
+        }
 
         function renderizarPedidosDoCliente(emailCliente) {
             container.innerHTML = "";
@@ -207,16 +232,17 @@
                 if(ped.itens) {
                     Object.keys(ped.itens).forEach(k => {
                         const it = ped.itens[k];
-                        htmlItens += `<div class="item-linha">🛍️ <b>${it.quantidade}x</b> ${it.nome}</div>`;
+                        htmlItens += `<div class="item-linha">🔷 <b>${it.quantidade}x</b> ${it.nome}</div>`;
                     });
                 }
 
-                // CONTROLE DE BOTÕES RÍGIDO: Só cria botões se o status for perfeitamente "pendente"
+                // CONTROLE DE SEGURANÇA: Botões de Editar e Cancelar só aparecem se o status for "pendente"
                 let botoesHTML = "";
                 if(ped.status === "pendente") {
                     botoesHTML = `
                         <div class="btn-acao-container">
-                            <button class="btn-cancelar" onclick="cancelarMeuPedido('${id}')">❌ Cancelar Pedido</button>
+                            <button class="btn-editar" onclick="editarMeuPedido('${id}')">✏️ Editar Pedido</button>
+                            <button class="btn-cancelar" onclick="cancelarMeuPedido('${id}')">❌ Cancelar</button>
                         </div>
                     `;
                 }
@@ -224,7 +250,7 @@
                 card.innerHTML = `
                     <div class="pedido-header">
                         <div>
-                            <span style="font-size: 12px; color: #aaa;">Data: ${ped.data || ''}</span><br>
+                            <span style="font-size: 13px; color: #aaa;">Data: ${ped.data || ''}</span><br>
                             <span style="font-size: 11px; color: #666;">ID: ${id}</span>
                         </div>
                         <span class="status-tag ${ped.status}">${ped.status}</span>
@@ -241,13 +267,54 @@
             });
         }
 
-        // --- SISTEMA ATÔMICO DE CANCELAMENTO PELO CLIENTE (DEVOLVE ESTOQUE) ---
+        // --- FUNÇÃO CRÍTICA: EDITAR E REABRIR O PEDIDO NO CATÁLOGO ---
+        window.editarMeuPedido = async function(id) {
+            const pedido = todosPedidos[id];
+            if(!pedido || pedido.status !== "pendente") {
+                alert("Este pedido não está mais pendente e não pode ser editado.");
+                return;
+            }
+
+            if(confirm("Deseja reabrir este pedido? Ele será temporariamente removido do painel, os itens voltarão ao estoque e você será enviado de volta ao carrinho do catálogo para fazer as modificações.")) {
+                
+                let listaItensRecuperados = [];
+
+                if(pedido.itens) {
+                    for (const k of Object.keys(pedido.itens)) {
+                        const item = pedido.itens[k];
+                        const estoqueRef = ref(db, `produtos/${k}/estoque`);
+
+                        // Devolve a quantidade para o estoque de forma segura
+                        await runTransaction(estoqueRef, (atual) => {
+                            if(atual === null) return atual;
+                            return atual + parseInt(item.quantidade);
+                        });
+
+                        // Estrutura o item no molde que o carrinho do catálogo espera receber
+                        listaItensRecuperados.push({
+                            id: k,
+                            nome: item.nome,
+                            preco: parseFloat(item.precoUnitario || 0),
+                            quantidade: parseInt(item.quantidade)
+                        });
+                    }
+                }
+
+                // Transfere o carrinho para a memória temporária do navegador
+                localStorage.setItem("carrinho_recuperado", JSON.stringify(listaItensRecuperados));
+
+                // Remove o pedido do banco de dados (será recriado no fechamento)
+                await remove(ref(db, `pedidos/${id}`));
+
+                alert("Itens recuperados com sucesso! Redirecionando para o catálogo...");
+                window.location.href = "catalogo.html";
+            }
+        };
+
+        // --- SISTEMA DE CANCELAMENTO PELO CLIENTE ---
         window.cancelarMeuPedido = async function(id) {
             const pedido = todosPedidos[id];
-            if(!pedido) return;
-
-            // Dupla verificação de proteção em tempo real antes de rodar o código
-            if(pedido.status !== "pendente") {
+            if(!pedido || pedido.status !== "pendente") {
                 alert("Este pedido mudou de status recentemente e não pode mais ser cancelado.");
                 return;
             }
@@ -265,6 +332,7 @@
                     }
                 }
 
+                // Em vez de excluir, muda o status para 'cancelado' para fins de histórico
                 await update(ref(db, `pedidos/${id}`), { status: "cancelado" });
                 alert("Pedido cancelado com sucesso!");
             }
