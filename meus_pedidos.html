@@ -316,7 +316,7 @@
                 // Atualiza o status para cancelado em vez de deletar (evita bugs de concorrência)
                 await update(ref(db, `pedidos/${id}`), { status: "cancelado" });
 
-                alert("Itens enviados para o seu carrinho! Você será enviado ao catálogo para alterá-los.");
+                alert("Redirecionando ao catálogo para as alterações no pedido");
                 window.location.href = "catalogo.html";
             }
         };
