@@ -169,7 +169,7 @@
 
         .lista-carrinho {
             margin: 15px 0;
-            max-height: 240px;
+            max-height: 340px;
             overflow-y: auto;
         }
 
@@ -178,10 +178,37 @@
             justify-content: space-between;
             align-items: center;
             background-color: #0b0c10;
-            padding: 8px 12px;
+            padding: 10px;
             border-radius: 6px;
             margin-bottom: 8px;
             font-size: 14px;
+        }
+
+        /* CONTROLADORES DE QUANTIDADE */
+        .controles-qtd {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .btn-qtd {
+            background-color: #1f2833;
+            color: #00d2ff;
+            border: 1px solid #00d2ff55;
+            width: 26px;
+            height: 26px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .btn-qtd:hover {
+            background-color: #00d2ff;
+            color: #0b0c10;
         }
 
         .btn-remove-item {
@@ -190,6 +217,7 @@
             color: #ff4d4d;
             cursor: pointer;
             font-weight: bold;
+            font-size: 16px;
         }
 
         .total-box {
@@ -234,6 +262,11 @@
         }
         .btn-confirmar:hover {
             background-color: #00cc55;
+        }
+        .btn-confirmar:disabled {
+            background-color: #2c3540;
+            color: #666;
+            cursor: not-allowed;
         }
 
         #msg-carregando {
@@ -309,11 +342,26 @@
             }
         });
 
-        // --- BUSCA PRODUTOS REALTIME ---
+        // --- VERIFICA SE HÁ PRODUTOS DE UMA EDICÃO ANTERIOR SALVOS ---
+        if (localStorage.getItem("carrinho_recuperado")) {
+            try {
+                carrinhoLocal = JSON.parse(localStorage.getItem("carrinho_recuperado"));
+                localStorage.removeItem("carrinho_recuperado");
+            } catch (e) {
+                console.error("Erro ao processar reabertura do carrinho:", e);
+            }
+        }
+
+        if (localStorage.getItem("email_logado")) {
+            inputEmail.value = localStorage.getItem("email_logado");
+        }
+
+        // --- OBSERVA PRODUTOS EM TEMPO REAL NO FIREBASE ---
         onValue(ref(db, "produtos"), (snapshot) => {
             if(snapshot.exists()){
                 bancoProdutos = snapshot.val();
                 renderizarProdutos();
+                atualizarCarrinhoVisual();
             } else {
                 containerProdutos.innerHTML = "<p id='msg-carregando'>Nenhum produto cadastrado no momento.</p>";
             }
@@ -358,7 +406,7 @@
             const itemExistente = carrinhoLocal.find(i => i.id === id);
 
             if(itemExistente) {
-                if(itemExistente.quantidade + 1 > prod.estoque) {
+                if(itemExistente.quantidade + 1 > parseInt(prod.estoque)) {
                     alert("Limite de estoque atingido para este produto!");
                     return;
                 }
@@ -368,13 +416,34 @@
                     id: id,
                     nome: prod.nome,
                     preco: parseFloat(prod.preco),
+                    whitespace: "",
                     quantidade: 1
                 });
             }
             atualizarCarrinhoVisual();
         }
 
-        window.removerItem = function(id) {
+        // --- SISTEMA DE MANIPULAÇÃO DIRETA DE QUANTIDADES ---
+        window.alterarQuantidade = function(id, delta) {
+            const item = carrinhoLocal.find(i => i.id === id);
+            if (!item) return;
+
+            const prodOriginal = bancoProdutos[id];
+            const novaQuantidade = item.quantidade + delta;
+
+            if (novaQuantidade <= 0) {
+                carrinhoLocal = carrinhoLocal.filter(i => i.id !== id);
+            } else {
+                if (prodOriginal && novaQuantidade > parseInt(prodOriginal.estoque)) {
+                    alert("Quantidade indisponível no estoque comercial no momento.");
+                    return;
+                }
+                item.quantidade = novaQuantidade;
+            }
+            atualizarCarrinhoVisual();
+        };
+
+        window.removerItemTotal = function(id) {
             carrinhoLocal = carrinhoLocal.filter(i => i.id !== id);
             atualizarCarrinhoVisual();
         };
@@ -395,16 +464,21 @@
                 div.innerHTML = `
                     <div>
                         <strong>${item.nome}</strong><br>
-                        <span style="color:#00d2ff">${item.quantidade}x</span> R$ ${item.preco.toFixed(2).replace('.',',')}
+                        <span style="color:#00ff66; font-weight: bold;">R$ ${item.preco.toFixed(2).replace('.',',')}</span>
+                        <div class="controles-qtd">
+                            <button class="btn-qtd" onclick="alterarQuantidade('${item.id}', -1)">-</button>
+                            <span style="font-weight:bold; min-width:20px; text-align:center;">${item.quantidade}</span>
+                            <button class="btn-qtd" onclick="alterarQuantidade('${item.id}', 1)">+</button>
+                        </div>
                     </div>
-                    <button class="btn-remove-item" onclick="removerItem('${item.id}')">❌</button>
+                    <button class="btn-remove-item" onclick="removerItemTotal('${item.id}')">❌</button>
                 `;
                 containerCarrinho.appendChild(div);
             });
             txtTotal.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
         }
 
-        // --- ENVIAR NOVO PEDIDO COM VERIFICAÇÃO ATÔMICA ---
+        // --- FECHAMENTO DO PEDIDO COM BLOQUEIO DE ESTOQUE ATÔMICO ---
         document.getElementById("btn-fechar-pedido").addEventListener("click", async () => {
             const email = inputEmail.value.trim().toLowerCase();
             if(!email || !email.includes("@")) {
@@ -416,6 +490,9 @@
                 return;
             }
 
+            // Desativa botão para mitigar cliques duplos sequenciais
+            document.getElementById("btn-fechar-pedido").disabled = true;
+
             let sucessoEstoque = true;
             const objItens = {};
             let valorTotal = 0;
@@ -426,7 +503,7 @@
 
                 await runTransaction(estoqueRef, (atual) => {
                     if(atual === null) return atual;
-                    if(atual < item.quantidade) {
+                    if(atual < item.whitespace || atual < item.quantidade) {
                         erroFalta = true;
                         return atual;
                     }
@@ -434,7 +511,7 @@
                 });
 
                 if(erroFalta) {
-                    alert(`O item "${item.nome}" acabou de esgotar no estoque.`);
+                    alert(`O item "${item.nome}" esgotou ou mudou de quantidade disponível em estoque.`);
                     sucessoEstoque = false;
                     break;
                 }
@@ -447,7 +524,10 @@
                 valorTotal += (item.preco * item.quantidade);
             }
 
-            if(!sucessoEstoque) return;
+            if(!sucessoEstoque) {
+                document.getElementById("btn-fechar-pedido").disabled = false;
+                return;
+            }
 
             try {
                 const novoPedidoRef = push(ref(db, "pedidos"));
@@ -468,7 +548,9 @@
                 inputEmail.value = "";
             } catch(e) {
                 console.error(e);
-                alert("Falha ao salvar o pedido. Verifique sua conexão.");
+                alert("Falha ao salvar o pedido. Tente novamente.");
+            } finally {
+                document.getElementById("btn-fechar-pedido").disabled = false;
             }
         });
     </script>
