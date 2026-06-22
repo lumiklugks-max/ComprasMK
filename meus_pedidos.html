@@ -149,6 +149,11 @@
             transition: 0.2s;
         }
         .btn-editar:hover { background-color: #ffa500; color: black; }
+
+        button:disabled {
+            opacity: 0.4 !important;
+            cursor: not-allowed !important;
+        }
     </style>
 </head>
 <body>
@@ -169,7 +174,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, remove, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, onValue, update, runTransaction, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "SUA_API_KEY",
@@ -183,11 +188,12 @@
         const db = getDatabase(app);
 
         let todosPedidos = {};
+        let executandoAcao = false; // Trava contra cliques duplos simultâneos
+
         const container = document.getElementById("lista-container");
         const btnBuscar = document.getElementById("btn-buscar");
         const inputEmail = document.getElementById("busca-email");
 
-        // Mantém o e-mail preenchido se o usuário já buscou antes nesta sessão
         if(localStorage.getItem("email_logado")) {
             inputEmail.value = localStorage.getItem("email_logado");
             ouvirPedidosDoBanco(inputEmail.value);
@@ -236,13 +242,12 @@
                     });
                 }
 
-                // CONTROLE DE SEGURANÇA: Botões de Editar e Cancelar só aparecem se o status for "pendente"
                 let botoesHTML = "";
                 if(ped.status === "pendente") {
                     botoesHTML = `
                         <div class="btn-acao-container">
-                            <button class="btn-editar" onclick="editarMeuPedido('${id}')">✏️ Editar Pedido</button>
-                            <button class="btn-cancelar" onclick="cancelarMeuPedido('${id}')">❌ Cancelar</button>
+                            <button class="btn-editar" data-id="${id}" onclick="editarMeuPedido('${id}', this)">✏️ Editar Pedido</button>
+                            <button class="btn-cancelar" data-id="${id}" onclick="cancelarMeuPedido('${id}', this)">❌ Cancelar</button>
                         </div>
                     `;
                 }
@@ -267,30 +272,35 @@
             });
         }
 
-        // --- FUNÇÃO CRÍTICA: EDITAR E REABRIR O PEDIDO NO CATÁLOGO ---
-        window.editarMeuPedido = async function(id) {
-            const pedido = todosPedidos[id];
-            if(!pedido || pedido.status !== "pendente") {
-                alert("Este pedido não está mais pendente e não pode ser editado.");
+        // --- SISTEMA BLINDADO DE EDIÇÃO ---
+        window.editarMeuPedido = async function(id, btn) {
+            if(executandoAcao) return;
+
+            // Busca do estado síncrono atualizado no Firebase para validação de segurança
+            const snapValidacao = await get(ref(db, `pedidos/${id}/status`));
+            if(!snapValidacao.exists() || snapValidacao.val() !== "pendente") {
+                alert("Este pedido mudou de estado e não está mais disponível para alteração.");
                 return;
             }
 
-            if(confirm("Deseja reabrir este pedido? Os itens voltarão ao estoque e você será enviado de volta ao catálogo para editá-lo")) {
-                
+            if(confirm("Deseja reabrir este pedido? Seus itens retornarão ao catálogo e este registro pendente será arquivado.")) {
+                executandoAcao = true;
+                btn.disabled = true;
+
+                const pedido = todosPedidos[id];
                 let listaItensRecuperados = [];
 
-                if(pedido.itens) {
+                if(pedido && pedido.itens) {
                     for (const k of Object.keys(pedido.itens)) {
                         const item = pedido.itens[k];
                         const estoqueRef = ref(db, `produtos/${k}/estoque`);
 
-                        // Devolve a quantidade para o estoque de forma segura
+                        // Devolve estoque de forma atômica
                         await runTransaction(estoqueRef, (atual) => {
                             if(atual === null) return atual;
                             return atual + parseInt(item.quantidade);
                         });
 
-                        // Estrutura o item no molde que o carrinho do catálogo espera receber
                         listaItensRecuperados.push({
                             id: k,
                             nome: item.nome,
@@ -300,27 +310,33 @@
                     }
                 }
 
-                // Transfere o carrinho para a memória temporária do navegador
+                // Despacha itens para a sessão de armazenamento local do navegador
                 localStorage.setItem("carrinho_recuperado", JSON.stringify(listaItensRecuperados));
+                
+                // Atualiza o status para cancelado em vez de deletar (evita bugs de concorrência)
+                await update(ref(db, `pedidos/${id}`), { status: "cancelado" });
 
-                // Remove o pedido do banco de dados (será recriado no fechamento)
-                await remove(ref(db, `pedidos/${id}`));
-
-                alert("Itens recuperados com sucesso! Redirecionando para o catálogo...");
+                alert("Itens enviados para o seu carrinho! Você será enviado ao catálogo para alterá-los.");
                 window.location.href = "catalogo.html";
             }
         };
 
-        // --- SISTEMA DE CANCELAMENTO PELO CLIENTE ---
-        window.cancelarMeuPedido = async function(id) {
-            const pedido = todosPedidos[id];
-            if(!pedido || pedido.status !== "pendente") {
-                alert("Este pedido mudou de status recentemente e não pode mais ser cancelado.");
+        // --- SISTEMA BLINDADO DE CANCELAMENTO ---
+        window.cancelarMeuPedido = async function(id, btn) {
+            if(executandoAcao) return;
+
+            const snapValidacao = await get(ref(db, `pedidos/${id}/status`));
+            if(!snapValidacao.exists() || snapValidacao.val() !== "pendente") {
+                alert("O pedido já foi faturado ou modificado pelo administrador!");
                 return;
             }
 
-            if(confirm("Tem certeza que deseja cancelar definitivamente este pedido? Seus itens retornarão ao estoque comercial.")) {
-                if(pedido.itens) {
+            if(confirm("Tem certeza que deseja cancelar este pedido? Seus itens retornarão ao estoque comercial.")) {
+                executandoAcao = true;
+                btn.disabled = true;
+
+                const pedido = todosPedidos[id];
+                if(pedido && pedido.itens) {
                     for (const k of Object.keys(pedido.itens)) {
                         const item = pedido.itens[k];
                         const estoqueRef = ref(db, `produtos/${k}/estoque`);
@@ -332,9 +348,9 @@
                     }
                 }
 
-                // Em vez de excluir, muda o status para 'cancelado' para fins de histórico
                 await update(ref(db, `pedidos/${id}`), { status: "cancelado" });
                 alert("Pedido cancelado com sucesso!");
+                executandoAcao = false;
             }
         };
     </script>
