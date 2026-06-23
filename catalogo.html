@@ -50,6 +50,12 @@
             color: #00d2ff;
         }
 
+        .usuario-logado-info {
+            font-size: 14px;
+            color: #aaaaaa;
+            margin-right: 15px;
+        }
+
         .btn-meus-pedidos {
             background-color: #1f2833;
             color: #00d2ff;
@@ -237,18 +243,6 @@
             gap: 10px;
         }
 
-        .form-checkout input {
-            background-color: #0b0c10;
-            border: 1px solid #2c3540;
-            border-radius: 6px;
-            padding: 12px;
-            color: white;
-            outline: none;
-        }
-        .form-checkout input:focus {
-            border-color: #00d2ff;
-        }
-
         .btn-confirmar {
             background-color: #00ff66;
             color: #0b0c10;
@@ -282,7 +276,10 @@
 
     <div class="header-catalogo">
         <h1 id="titulo-secreto" style="cursor: default; user-select: none;">🛒 Nosso Catálogo Comercial</h1>
-        <a href="meus_pedidos.html" class="btn-meus-pedidos">📦 Meus Pedidos</a>
+        <div>
+            <span class="usuario-logado-info" id="txt-usuario-sessao">Identificando usuário...</span>
+            <a href="meus_pedidos.html" class="btn-meus-pedidos">📦 Meus Pedidos</a>
+        </div>
     </div>
 
     <div class="main-container">
@@ -303,7 +300,6 @@
             </div>
 
             <div class="form-checkout">
-                <input type="email" id="email-cliente" placeholder="Informe seu e-mail cadastrado" required>
                 <button class="btn-confirmar" id="btn-fechar-pedido">Confirmar Pedido 🚀</button>
             </div>
         </div>
@@ -327,11 +323,34 @@
 
         let bancoProdutos = {};
         let carrinhoLocal = [];
+        let emailUsuarioLogado = "";
 
         const containerProdutos = document.getElementById("produtos-container");
         const containerCarrinho = document.getElementById("carrinho-itens");
         const txtTotal = document.getElementById("carrinho-total");
-        const inputEmail = document.getElementById("email-cliente");
+        const txtUsuarioSessao = document.getElementById("txt-usuario-sessao");
+        const btnFecharPedido = document.getElementById("btn-fechar-pedido");
+
+        // --- CAPTURA RÍGIDA DO USUÁRIO LOGADO NA TELA DE LOGIN ANTERIOR ---
+        if (localStorage.getItem("email_logado")) {
+            emailUsuarioLogado = localStorage.getItem("email_logado").trim().toLowerCase();
+            txtUsuarioSessao.innerText = `Logado como: ${emailUsuarioLogado}`;
+        } else {
+            txtUsuarioSessao.innerText = "⚠️ Usuário não identificado!";
+            txtUsuarioSessao.style.color = "#ff4d4d";
+            btnFecharPedido.disabled = true;
+            btnFecharPedido.innerText = "Faça Login Primeiro";
+        }
+
+        // --- VERIFICA SE HÁ PRODUTOS DE UMA EDIÇÃO ANTERIOR SALVOS ---
+        if (localStorage.getItem("carrinho_recuperado")) {
+            try {
+                carrinhoLocal = JSON.parse(localStorage.getItem("carrinho_recuperado"));
+                localStorage.removeItem("carrinho_recuperado");
+            } catch (e) {
+                console.error("Erro ao processar reabertura do carrinho:", e);
+            }
+        }
 
         // --- BACKDOOR DE ACESSO ADMIN SEGRETO ---
         let cliquesAdmin = 0;
@@ -342,21 +361,7 @@
             }
         });
 
-        // --- VERIFICA SE HÁ PRODUTOS DE UMA EDICÃO ANTERIOR SALVOS ---
-        if (localStorage.getItem("carrinho_recuperado")) {
-            try {
-                carrinhoLocal = JSON.parse(localStorage.getItem("carrinho_recuperado"));
-                localStorage.removeItem("carrinho_recuperado");
-            } catch (e) {
-                console.error("Erro ao processar reabertura do carrinho:", e);
-            }
-        }
-
-        if (localStorage.getItem("email_logado")) {
-            inputEmail.value = localStorage.getItem("email_logado");
-        }
-
-        // --- OBSERVA PRODUTOS EM TEMPO REAL NO FIREBASE ---
+        // --- OBSERVA PRODUTOS EM TEMPO REAL NO FIREBASE (SINCRONIZAÇÃO EM DISPOSITIVOS DE TERCEIROS) ---
         onValue(ref(db, "produtos"), (snapshot) => {
             if(snapshot.exists()){
                 bancoProdutos = snapshot.val();
@@ -389,12 +394,12 @@
                             ${esgotado ? 'Esgotado' : `Disp: ${estoque} un`}
                         </span>
                     </div>
-                    <button class="btn-add-carrinho" ${esgotado ? 'disabled' : ''} data-id="${id}">
+                    <button class="btn-add-carrinho" ${esgotado || !emailUsuarioLogado ? 'disabled' : ''} data-id="${id}">
                         ${esgotado ? '🚫 Indisponível' : '➕ Adicionar ao Pedido'}
                     </button>
                 `;
 
-                if(!esgotado) {
+                if(!esgotado && emailUsuarioLogado) {
                     card.querySelector(".btn-add-carrinho").addEventListener("click", () => adicionarItem(id));
                 }
                 containerProdutos.appendChild(card);
@@ -416,14 +421,12 @@
                     id: id,
                     nome: prod.nome,
                     preco: parseFloat(prod.preco),
-                    whitespace: "",
                     quantidade: 1
                 });
             }
             atualizarCarrinhoVisual();
         }
 
-        // --- SISTEMA DE MANIPULAÇÃO DIRETA DE QUANTIDADES ---
         window.alterarQuantidade = function(id, delta) {
             const item = carrinhoLocal.find(i => i.id === id);
             if (!item) return;
@@ -478,11 +481,10 @@
             txtTotal.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
         }
 
-        // --- FECHAMENTO DO PEDIDO COM BLOQUEIO DE ESTOQUE ATÔMICO ---
-        document.getElementById("btn-fechar-pedido").addEventListener("click", async () => {
-            const email = inputEmail.value.trim().toLowerCase();
-            if(!email || !email.includes("@")) {
-                alert("Por favor, digite um e-mail válido.");
+        // --- FECHAMENTO DO PEDIDO ---
+        btnFecharPedido.addEventListener("click", async () => {
+            if(!emailUsuarioLogado) {
+                alert("Erro crítico: Você precisa estar logado.");
                 return;
             }
             if(carrinhoLocal.length === 0) {
@@ -490,8 +492,7 @@
                 return;
             }
 
-            // Desativa botão para mitigar cliques duplos sequenciais
-            document.getElementById("btn-fechar-pedido").disabled = true;
+            btnFecharPedido.disabled = true;
 
             let sucessoEstoque = true;
             const objItens = {};
@@ -503,7 +504,7 @@
 
                 await runTransaction(estoqueRef, (atual) => {
                     if(atual === null) return atual;
-                    if(atual < item.whitespace || atual < item.quantidade) {
+                    if(atual < item.quantidade) {
                         erroFalta = true;
                         return atual;
                     }
@@ -525,7 +526,7 @@
             }
 
             if(!sucessoEstoque) {
-                document.getElementById("btn-fechar-pedido").disabled = false;
+                btnFecharPedido.disabled = false;
                 return;
             }
 
@@ -535,7 +536,7 @@
                 const dataStr = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
 
                 await set(novoPedidoRef, {
-                    email: email,
+                    email: emailUsuarioLogado,
                     total: valorTotal,
                     status: "pendente",
                     data: dataStr,
@@ -545,12 +546,11 @@
                 alert("Pedido gerado com sucesso!");
                 carrinhoLocal = [];
                 atualizarCarrinhoVisual();
-                inputEmail.value = "";
             } catch(e) {
                 console.error(e);
                 alert("Falha ao salvar o pedido. Tente novamente.");
             } finally {
-                document.getElementById("btn-fechar-pedido").disabled = false;
+                btnFecharPedido.disabled = false;
             }
         });
     </script>
