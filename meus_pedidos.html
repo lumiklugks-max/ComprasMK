@@ -23,6 +23,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
+            border-bottom: 1px solid #1f2833;
+            padding-bottom: 15px;
         }
 
         .btn-voltar {
@@ -35,37 +37,13 @@
             border: 1px solid #333;
         }
 
-        .login-box {
-            background-color: #1f2833;
-            border-radius: 10px;
-            padding: 20px;
-            width: 100%;
-            max-width: 800px;
-            box-sizing: border-box;
-            margin-bottom: 25px;
-            border: 1px solid #2c3540;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-        .login-box input {
-            flex: 1;
-            padding: 12px;
-            background-color: #0b0c10;
-            border: 1px solid #333;
+        .info-usuario-titulo {
+            font-size: 14px;
+            color: #00d2ff;
+            background-color: rgba(0, 210, 255, 0.05);
+            padding: 6px 12px;
             border-radius: 6px;
-            color: white;
-            outline: none;
-        }
-        .login-box input:focus { border-color: #00d2ff; }
-        .login-box button {
-            padding: 12px 24px;
-            background-color: #00d2ff;
-            color: #000;
-            border: none;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
+            border: 1px solid #00d2ff22;
         }
 
         .pedidos-lista {
@@ -160,16 +138,12 @@
 
     <div class="header-area">
         <a href="catalogo.html" class="btn-voltar">← Voltar para o Catálogo</a>
+        <span class="info-usuario-titulo" id="perfil-email">Carregando perfil...</span>
         <h2>📦 Meus Pedidos</h2>
     </div>
 
-    <div class="login-box">
-        <input type="email" id="busca-email" placeholder="Digite seu e-mail para verificar seus pedidos...">
-        <button id="btn-buscar">Buscar</button>
-    </div>
-
     <div class="pedidos-lista" id="lista-container">
-        <p style="text-align: center; color: #666;">Digite seu e-mail acima para listar seu histórico.</p>
+        <p style="text-align: center; color: #666;">Verificando banco de dados...</p>
     </div>
 
     <script type="module">
@@ -188,26 +162,22 @@
         const db = getDatabase(app);
 
         let todosPedidos = {};
-        let executandoAcao = false; // Trava contra cliques duplos simultâneos
+        let executandoAcao = false; 
+        let emailSessaoLogado = "";
 
         const container = document.getElementById("lista-container");
-        const btnBuscar = document.getElementById("btn-buscar");
-        const inputEmail = document.getElementById("busca-email");
+        const txtPerfilEmail = document.getElementById("perfil-email");
 
+        // --- TRAVA DE SEGURANÇA EXCLUSIVA COM BASE NA AUTENTICAÇÃO ---
         if(localStorage.getItem("email_logado")) {
-            inputEmail.value = localStorage.getItem("email_logado");
-            ouvirPedidosDoBanco(inputEmail.value);
+            emailSessaoLogado = localStorage.getItem("email_logado").trim().toLowerCase();
+            txtPerfilEmail.innerText = `Histórico de: ${emailSessaoLogado}`;
+            ouvirPedidosDoBanco(emailSessaoLogado);
+        } else {
+            txtPerfilEmail.innerText = "Sessão inválida";
+            txtPerfilEmail.style.color = "#ff4d4d";
+            container.innerHTML = "<p style='text-align: center; color:#ff4d4d; font-weight:bold;'>Erro de Autenticação. Faça login novamente.</p>";
         }
-
-        btnBuscar.addEventListener("click", () => {
-            const email = inputEmail.value.trim().toLowerCase();
-            if(!email || !email.includes("@")) {
-                alert("Insira um e-mail válido.");
-                return;
-            }
-            localStorage.setItem("email_logado", email);
-            ouvirPedidosDoBanco(email);
-        });
 
         function ouvirPedidosDoBanco(emailCliente) {
             onValue(ref(db, "pedidos"), (snapshot) => {
@@ -215,17 +185,19 @@
                     todosPedidos = snapshot.val();
                     renderizarPedidosDoCliente(emailCliente);
                 } else {
-                    container.innerHTML = "<p style='text-align: center; color:#666;'>Nenhum registro encontrado.</p>";
+                    container.innerHTML = "<p style='text-align: center; color:#666;'>Nenhum registro encontrado no sistema.</p>";
                 }
             });
         }
 
         function renderizarPedidosDoCliente(emailCliente) {
             container.innerHTML = "";
+            
+            // Filtra os pedidos estritamente vinculados ao e-mail coletado do login
             let filtrados = Object.keys(todosPedidos).filter(id => todosPedidos[id].email && todosPedidos[id].email.toLowerCase() === emailCliente).reverse();
 
             if(filtrados.length === 0) {
-                container.innerHTML = "<p style='text-align: center; color:#aaa;'>Nenhum pedido localizado para este e-mail.</p>";
+                container.innerHTML = "<p style='text-align: center; color:#aaa;'>Você ainda não realizou nenhum pedido com esta conta.</p>";
                 return;
             }
 
@@ -276,7 +248,6 @@
         window.editarMeuPedido = async function(id, btn) {
             if(executandoAcao) return;
 
-            // Busca do estado síncrono atualizado no Firebase para validação de segurança
             const snapValidacao = await get(ref(db, `pedidos/${id}/status`));
             if(!snapValidacao.exists() || snapValidacao.val() !== "pendente") {
                 alert("Este pedido mudou de estado e não está mais disponível para alteração.");
@@ -295,7 +266,6 @@
                         const item = pedido.itens[k];
                         const estoqueRef = ref(db, `produtos/${k}/estoque`);
 
-                        // Devolve estoque de forma atômica
                         await runTransaction(estoqueRef, (atual) => {
                             if(atual === null) return atual;
                             return atual + parseInt(item.quantidade);
@@ -310,13 +280,10 @@
                     }
                 }
 
-                // Despacha itens para a sessão de armazenamento local do navegador
                 localStorage.setItem("carrinho_recuperado", JSON.stringify(listaItensRecuperados));
-                
-                // Atualiza o status para cancelado em vez de deletar (evita bugs de concorrência)
                 await update(ref(db, `pedidos/${id}`), { status: "cancelado" });
 
-                alert("Redirecionando ao catálogo para as alterações no pedido");
+                alert("Itens enviados para o seu carrinho! Você será enviado ao catálogo para alterá-los.");
                 window.location.href = "catalogo.html";
             }
         };
@@ -331,7 +298,7 @@
                 return;
             }
 
-            if(confirm("Tem certeza que deseja cancelar este pedido?")) {
+            if(confirm("Tem certeza que deseja cancelar este pedido? Seus itens retornarão ao estoque comercial.")) {
                 executandoAcao = true;
                 btn.disabled = true;
 
