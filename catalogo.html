@@ -3,14 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Compras</title>
+    <title>Catálogo Comercial Completo de Compras</title>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             background-color: #0b0c10;
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
+            padding: 30px 20px;
+            line-height: 1.6;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -20,7 +26,7 @@
             max-width: 1200px;
             width: 100%;
             display: grid;
-            grid-template-columns: 3fr 1fr;
+            grid-template-columns: 3fr 1.2fr;
             gap: 25px;
             margin-top: 20px;
         }
@@ -45,6 +51,8 @@
             margin: 0;
             font-size: 28px;
             color: #00d2ff;
+            cursor: pointer;
+            user-select: none;
         }
 
         .controles-topo {
@@ -55,7 +63,12 @@
 
         .usuario-logado-info {
             font-size: 14px;
-            color: #aaaaaa;
+            color: #ff4d4d;
+            font-weight: bold;
+            background-color: rgba(255, 77, 77, 0.05);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 77, 77, 0.15);
         }
 
         .btn-meus-pedidos {
@@ -65,11 +78,12 @@
             padding: 10px 20px;
             border-radius: 8px;
             font-weight: bold;
-            border: 1px solid #00d2ff33;
-            transition: 0.2s;
+            border: 1px solid rgba(0, 210, 255, 0.23);
+            transition: all 0.2s ease-in-out;
         }
         .btn-meus-pedidos:hover {
             background-color: rgba(0, 210, 255, 0.1);
+            border-color: #00d2ff;
         }
 
         .btn-sair {
@@ -80,7 +94,7 @@
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.2s ease-in-out;
         }
         .btn-sair:hover {
             background-color: #ff4d4d;
@@ -89,7 +103,7 @@
 
         .produtos-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 20px;
         }
 
@@ -105,7 +119,7 @@
             transition: transform 0.2s;
         }
         .produto-card:hover {
-            transform: translateY(-4px);
+            transform: translateY(-2px);
         }
 
         .produto-img {
@@ -121,34 +135,29 @@
             font-size: 18px;
             color: #ffffff;
         }
-
         .produto-info p {
             margin: 0 0 12px 0;
             font-size: 13px;
             color: #aaaaaa;
             min-height: 38px;
-            line-height: 1.4;
         }
 
         .produto-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.05);
         }
-
         .produto-preco {
             color: #00ff66;
             font-weight: bold;
             font-size: 20px;
         }
-
         .produto-estoque {
             font-size: 12px;
             color: #00d2ff;
-        }
-        .produto-estoque.esgotado {
-            color: #ff4d4d;
         }
 
         .btn-add-carrinho {
@@ -160,15 +169,16 @@
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
-            transition: 0.2s;
+            margin-top: 12px;
+            transition: all 0.2s;
         }
-        .btn-add-carrinho:hover {
-            background-color: #00b4db;
+        .btn-add-carrinho:hover:not(:disabled) {
+            background-color: #00b2d6;
+            box-shadow: 0 2px 8px rgba(0, 210, 255, 0.3);
         }
         .btn-add-carrinho:disabled {
             background-color: #2c3540;
-            color: #666;
+            color: #666666;
             cursor: not-allowed;
         }
 
@@ -178,20 +188,14 @@
             border-radius: 12px;
             padding: 20px;
             height: fit-content;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-
         .carrinho-lateral h2 {
-            margin-top: 0;
             font-size: 20px;
+            margin-bottom: 15px;
+            color: #ffffff;
             border-bottom: 1px solid #2c3540;
-            padding-bottom: 10px;
-        }
-
-        .lista-carrinho {
-            margin: 15px 0;
-            max-height: 340px;
-            overflow-y: auto;
+            padding-bottom: 8px;
         }
 
         .item-carrinho {
@@ -202,42 +206,10 @@
             padding: 10px;
             border-radius: 6px;
             margin-bottom: 8px;
+            border: 1px solid rgba(255,255,255,0.02);
+        }
+        .item-carrinho span {
             font-size: 14px;
-        }
-
-        .controles-qtd {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 6px;
-        }
-
-        .btn-qtd {
-            background-color: #1f2833;
-            color: #00d2ff;
-            border: 1px solid #00d2ff55;
-            width: 26px;
-            height: 26px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.2s;
-        }
-        .btn-qtd:hover {
-            background-color: #00d2ff;
-            color: #0b0c10;
-        }
-
-        .btn-remove-item {
-            background: none;
-            border: none;
-            color: #ff4d4d;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
         }
 
         .total-box {
@@ -251,62 +223,92 @@
             padding-top: 12px;
         }
 
-        .form-checkout {
+        .box-pagamento-cliente {
+            background-color: #0b0c10;
+            border: 1px solid #2c3540;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
             display: flex;
             flex-direction: column;
             gap: 10px;
+        }
+        .box-pagamento-cliente label {
+            font-size: 13px;
+            color: #cccccc;
+            font-weight: bold;
+        }
+        .box-pagamento-cliente select {
+            background-color: #1f2833;
+            color: white;
+            border: 1px solid #2c3540;
+            padding: 10px;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+        }
+        .box-pagamento-cliente select:focus {
+            border-color: #00d2ff;
+        }
+
+        .preview-parcelas {
+            font-size: 13px;
+            color: #00d2ff;
+            background-color: rgba(0, 210, 255, 0.08);
+            border: 1px dashed rgba(0, 210, 255, 0.3);
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 5px;
+            display: none;
+            line-height: 1.4;
         }
 
         .btn-confirmar {
             background-color: #00ff66;
             color: #0b0c10;
             border: none;
-            padding: 14px;
+            padding: 15px;
             font-weight: bold;
-            font-size: 15px;
             border-radius: 8px;
             cursor: pointer;
-            transition: 0.2s;
+            width: 100%;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
         }
-        .btn-confirmar:hover {
+        .btn-confirmar:hover:not(:disabled) {
             background-color: #00cc55;
+            box-shadow: 0 4px 12px rgba(0, 255, 102, 0.2);
         }
         .btn-confirmar:disabled {
             background-color: #2c3540;
-            color: #666;
+            color: #666666;
             cursor: not-allowed;
         }
-
-        #msg-carregando {
-            text-align: center;
-            color: #aaa;
-            grid-column: span 3;
-            padding: 40px;
-            font-style: italic;
-        }
     </style>
+</script>
 </head>
 <body>
 
     <div class="header-catalogo">
-        <h1 id="titulo-secreto" style="cursor: default; user-select: none;">🛒 Nosso Catálogo Comercial</h1>
+        <h1 id="titulo-secreto">🛒 Nosso Catálogo Comercial</h1>
         <div class="controles-topo">
-            <span class="usuario-logado-info" id="txt-usuario-sessao">Identificando usuário...</span>
+            <span class="usuario-logado-info" id="txt-usuario-sessao">⚠️ Usuário não identificado!</span>
             <a href="meus_pedidos.html" class="btn-meus-pedidos">📦 Meus Pedidos</a>
             <button class="btn-sair" id="btn-logout">Sair 🚪</button>
         </div>
     </div>
 
     <div class="main-container">
-        
         <div class="produtos-grid" id="produtos-container">
-            <p id="msg-carregando">Buscando produtos no banco de dados...</p>
+            <p style="color: #666;">Buscando lista de produtos ativos...</p>
         </div>
 
         <div class="carrinho-lateral">
-            <h2>🛍️ Meu Carrinho</h2>
-            <div class="lista-carrinho" id="carrinho-itens">
-                <p style="color: #666; text-align: center; font-size: 14px;">Nenhum item selecionado</p>
+            <h2>🛍| Meu Carrinho</h2>
+            <div id="carrinho-itens">
+                <p style="color: #666; font-style: italic; font-size: 13px;">Nenhum item selecionado</p>
             </div>
 
             <div class="total-box">
@@ -314,11 +316,24 @@
                 <span id="carrinho-total">R$ 0,00</span>
             </div>
 
-            <div class="form-checkout">
-                <button class="btn-confirmar" id="btn-fechar-pedido">Confirmar Pedido 🚀</button>
-            </div>
-        </div>
+            <div class="box-pagamento-cliente" id="area-pagamento" style="display: none;">
+                <label for="select-metodo">Forma de Pagamento:</label>
+                <select id="select-metodo">
+                    <option value="pix">Pix ⚡</option>
+                    <option value="debito">Cartão de Débito 💳</option>
+                    <option value="credito">Cartão de Crédito 🛒</option>
+                </select>
 
+                <div id="box-credito-opcoes" style="display: none; flex-direction: column; gap: 5px; margin-top: 5px;">
+                    <label for="select-parcelas">Escolha o Parcelamento:</label>
+                    <select id="select-parcelas">
+                        </select>
+                </div>
+                <div class="preview-parcelas" id="txt-preview-juros"></div>
+            </div>
+
+            <button class="btn-confirmar" id="btn-fechar-pedido" disabled>Faça Login Primeiro</button>
+        </div>
     </div>
 
     <script type="module">
@@ -339,54 +354,75 @@
         let bancoProdutos = {};
         let carrinhoLocal = [];
         let emailUsuarioLogado = "";
+        let taxaAcrescimoConfig = 2.5;
 
-        const containerProdutos = document.getElementById("produtos-container");
-        const containerCarrinho = document.getElementById("carrinho-itens");
-        const txtTotal = document.getElementById("carrinho-total");
         const txtUsuarioSessao = document.getElementById("txt-usuario-sessao");
         const btnFecharPedido = document.getElementById("btn-fechar-pedido");
-        const btnLogout = document.getElementById("btn-logout");
+        const selectMetodo = document.getElementById("select-metodo");
+        const selectParcelas = document.getElementById("select-parcelas");
+        const boxCreditoOpcoes = document.getElementById("box-credito-opcoes");
+        const txtPreviewJuros = document.getElementById("txt-preview-juros");
+        const containerProdutos = document.getElementById("produtos-container");
+        const containerCarrinhoItens = document.getElementById("carrinho-itens");
+        const txtCarrinhoTotal = document.getElementById("carrinho-total");
 
-        // --- SISTEMA DE LOGOUT REAL E TOTAL ---
-        btnLogout.addEventListener("click", () => {
-            if(confirm("Deseja realmente encerrar sua sessão e deslogar desta conta?")) {
-                localStorage.clear(); // Limpa carrinho recuperado, e-mail da sessão e travas
-                window.location.href = "login.html"; // Mude para o nome correto do seu arquivo de login primário
+        // Preenche o seletor de parcelas de 1x até 12x de forma limpa via JS
+        function popularSeletorParcelas() {
+            selectParcelas.innerHTML = "";
+            for (let i = 1; i <= 12; i++) {
+                const opt = document.createElement("option");
+                opt.value = i;
+                if (i === 1) {
+                    opt.innerText = "1x (À Vista no Crédito)";
+                } else if (i <= 6) {
+                    opt.innerText = `${i}x Sem Acréscimo`;
+                } else {
+                    opt.innerText = `${i}x com Acréscimo Comercial`;
+                }
+                selectParcelas.appendChild(opt);
+            }
+        }
+        popularSeletorParcelas();
+
+        // Monitoramento da taxa de juros definida pela administração
+        onValue(ref(db, "configuracoes/taxa_juros"), (snap) => {
+            if(snap.exists()) {
+                taxaAcrescimoConfig = parseFloat(snap.val());
+                recalcularSimulacao();
             }
         });
 
+        // Verificação e validação rígida de login persistente do usuário
         if (localStorage.getItem("email_logado")) {
             emailUsuarioLogado = localStorage.getItem("email_logado").trim().toLowerCase();
             txtUsuarioSessao.innerText = `Logado como: ${emailUsuarioLogado}`;
-        } else {
-            txtUsuarioSessao.innerText = "⚠️ Usuário não identificado!";
-            txtUsuarioSessao.style.color = "#ff4d4d";
-            btnFecharPedido.disabled = true;
-            btnFecharPedido.innerText = "Faça Login Primeiro";
+            txtUsuarioSessao.style.color = "#00ff66";
+            btnFecharPedido.disabled = false;
+            btnFecharPedido.innerText = "Confirmar Pedido 🚀";
+            document.getElementById("area-pagamento").style.display = "flex";
         }
 
-        if (localStorage.getItem("carrinho_recuperado")) {
-            try {
-                carrinhoLocal = JSON.parse(localStorage.getItem("carrinho_recuperado"));
-                localStorage.removeItem("carrinho_recuperado");
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        let cliquesAdmin = 0;
-        document.getElementById("titulo-secreto").addEventListener("click", () => {
-            cliquesAdmin++;
-            if (cliquesAdmin >= 5) window.location.href = "admin_pedidos.html";
+        document.getElementById("btn-logout").addEventListener("click", () => {
+            localStorage.clear();
+            window.location.href = "login.html";
         });
 
+        // Atalho secreto do Administrador logado
+        let cliquesAdmin = 0;
+        document.getElementById("titulo-secreto").addEventListener("click", () => {
+            cliquesAdmin++; 
+            if (cliquesAdmin >= 5) {
+                window.location.href = "admin_pedidos.html";
+            }
+        });
+
+        // Escuta em tempo real da lista de mercadorias no banco de dados
         onValue(ref(db, "produtos"), (snapshot) => {
-            if(snapshot.exists()){
-                bancoProdutos = snapshot.val();
-                renderizarProdutos();
-                atualizarCarrinhoVisual();
+            if(snapshot.exists()){ 
+                bancoProdutos = snapshot.val(); 
+                renderizarProdutos(); 
             } else {
-                containerProdutos.innerHTML = "<p id='msg-carregando'>Nenhum produto cadastrado.</p>";
+                containerProdutos.innerHTML = "<p style='color:#666;'>Nenhum produto cadastrado no catálogo.</p>";
             }
         });
 
@@ -396,160 +432,200 @@
                 const p = bancoProdutos[id];
                 const card = document.createElement("div");
                 card.className = "produto-card";
-
                 const estoque = parseInt(p.estoque || 0);
-                const esgotado = estoque <= 0;
 
                 card.innerHTML = `
                     <img src="${p.imagem || 'https://via.placeholder.com/250'}" class="produto-img">
                     <div class="produto-info">
                         <h3>${p.nome}</h3>
-                        <p>${p.descricao || 'Sem descrição detalhada disponível.'}</p>
+                        <p>${p.descricao || 'Sem descrição cadastrada.'}</p>
                     </div>
                     <div class="produto-footer">
-                        <span class="produto-preco">R$ ${parseFloat(p.preco).toFixed(2).replace('.', ',')}</span>
-                        <span class="produto-estoque ${esgotado ? 'esgotado' : ''}">
-                            ${esgotado ? 'Esgotado' : `Disp: ${estoque} un`}
-                        </span>
+                        <span class="produto-preco">R$ ${parseFloat(p.preco || 0).toFixed(2).replace('.', ',')}</span>
+                        <span class="produto-estoque">Disp: ${estoque} un</span>
                     </div>
-                    <button class="btn-add-carrinho" ${esgotado || !emailUsuarioLogado ? 'disabled' : ''} data-id="${id}">
-                        ${esgotado ? '🚫 Indisponível' : '➕ Adicionar ao Pedido'}
+                    <button class="btn-add-carrinho" ${estoque <= 0 || !emailUsuarioLogado ? 'disabled' : ''} id="btn-add-${id}">
+                        ${estoque <= 0 ? '🚫 Esgotado' : '➕ Adicionar ao Pedido'}
                     </button>
                 `;
-
-                if(!esgotado && emailUsuarioLogado) {
-                    card.querySelector(".btn-add-carrinho").addEventListener("click", () => adicionarItem(id));
-                }
                 containerProdutos.appendChild(card);
+                
+                if(estoque > 0 && emailUsuarioLogado) {
+                    document.getElementById(`btn-add-${id}`).addEventListener("click", () => adicionarItemAoCarrinho(id));
+                }
             });
         }
 
-        function adicionarItem(id) {
+        function adicionarItemAoCarrinho(id) {
             const prod = bancoProdutos[id];
             const itemExistente = carrinhoLocal.find(i => i.id === id);
-
+            
             if(itemExistente) {
-                if(itemExistente.quantidade + 1 > parseInt(prod.estoque)) {
-                    alert("Limite de estoque atingido!");
+                if(itemExistente.quantidade >= parseInt(prod.estoque)) {
+                    alert("A quantidade selecionada excede o limite disponível em estoque!");
                     return;
                 }
                 itemExistente.quantidade++;
             } else {
-                carrinhoLocal.push({
-                    id: id,
-                    nome: prod.nome,
-                    preco: parseFloat(prod.preco),
-                    quantidade: 1
+                carrinhoLocal.push({ 
+                    id: id, 
+                    nome: prod.nome, 
+                    preco: parseFloat(prod.preco), 
+                    quantidade: 1 
                 });
             }
             atualizarCarrinhoVisual();
         }
 
-        window.alterarQuantidade = function(id, delta) {
-            const item = carrinhoLocal.find(i => i.id === id);
-            if (!item) return;
-
-            const prodOriginal = bancoProdutos[id];
-            const novaQuantidade = item.quantidade + delta;
-
-            if (novaQuantidade <= 0) {
-                carrinhoLocal = carrinhoLocal.filter(i => i.id !== id);
-            } else {
-                if (prodOriginal && novaQuantidade > parseInt(prodOriginal.estoque)) {
-                    alert("Quantidade indisponível.");
-                    return;
-                }
-                item.quantidade = novaQuantidade;
-            }
-            atualizarCarrinhoVisual();
-        };
-
-        window.removerItemTotal = function(id) {
-            carrinhoLocal = carrinhoLocal.filter(i => i.id !== id);
-            atualizarCarrinhoVisual();
-        };
-
         function atualizarCarrinhoVisual() {
-            containerCarrinho.innerHTML = "";
-            if(carrinhoLocal.length === 0) {
-                containerCarrinho.innerHTML = `<p style="color: #666; text-align: center; font-size: 14px;">Nenhum item selecionado</p>`;
-                txtTotal.innerText = "R$ 0,00";
+            containerCarrinhoItens.innerHTML = "";
+            if (carrinhoLocal.length === 0) {
+                containerCarrinhoItens.innerHTML = '<p style="color: #666; font-style: italic; font-size: 13px;">Nenhum item selecionado</p>';
+                txtCarrinhoTotal.innerText = "R$ 0,00";
+                txtPreviewJuros.style.display = "none";
                 return;
             }
 
-            let total = 0;
+            let totalAcumulado = 0;
             carrinhoLocal.forEach(item => {
-                total += (item.preco * item.quantidade);
-                const div = document.createElement("div");
-                div.className = "item-carrinho";
-                div.innerHTML = `
-                    <div>
-                        <strong>${item.nome}</strong><br>
-                        <span style="color:#00ff66; font-weight: bold;">R$ ${item.preco.toFixed(2).replace('.',',')}</span>
-                        <div class="controles-qtd">
-                            <button class="btn-qtd" onclick="alterarQuantidade('${item.id}', -1)">-</button>
-                            <span style="font-weight:bold; min-width:20px; text-align:center;">${item.quantidade}</span>
-                            <button class="btn-qtd" onclick="alterarQuantidade('${item.id}', 1)">+</button>
-                        </div>
-                    </div>
-                    <button class="btn-remove-item" onclick="removerItemTotal('${item.id}')">❌</button>
+                const subtotal = item.preco * item.quantidade;
+                totalAcumulado += subtotal;
+                
+                const divItem = document.createElement("div");
+                divItem.className = "item-carrinho";
+                divItem.innerHTML = `
+                    <span><b>${item.quantidade}x</b> ${item.nome}</span>
+                    <span>R$ ${subtotal.toFixed(2).replace('.',',')}</span>
                 `;
-                containerCarrinho.appendChild(div);
+                containerCarrinhoItens.appendChild(divItem);
             });
-            txtTotal.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+
+            txtCarrinhoTotal.innerText = `R$ ${totalAcumulado.toFixed(2).replace('.', ',')}`;
+            recalcularSimulacao();
+        }
+
+        selectMetodo.addEventListener("change", () => {
+            if (selectMetodo.value === "credito") {
+                boxCreditoOpcoes.style.display = "flex";
+            } else {
+                boxCreditoOpcoes.style.display = "none";
+            }
+            recalcularSimulacao();
+        });
+
+        selectParcelas.addEventListener("change", recalcularSimulacao);
+
+        function recalcularSimulacao() {
+            let totalBase = carrinhoLocal.reduce((acc, i) => acc + (i.preco * i.quantidade), 0);
+            if(totalBase === 0) { 
+                txtPreviewJuros.style.display = "none"; 
+                return; 
+            }
+
+            if(selectMetodo.value === "credito") {
+                let parcelas = parseInt(selectParcelas.value || 1);
+                let valorFinalCalculado = totalBase;
+                
+                if(parcelas <= 6) {
+                    let vParcela = totalBase / parcelas;
+                    txtPreviewJuros.innerHTML = `
+                        • Plano: <b>${parcelas}x de R$ ${vParcela.toFixed(2).replace('.',',')}</b> Sem Juros<br>
+                        • Total a pagar: R$ ${totalBase.toFixed(2).replace('.',',')}
+                    `;
+                } else {
+                    let parcelasExcedentes = parcelas - 6;
+                    let taxaFinal = (taxaAcrescimoConfig / 100) * parcelasExcedentes;
+                    valorFinalCalculado = totalBase * (1 + taxaFinal);
+                    let vParcela = valorFinalCalculado / parcelas;
+                    
+                    txtPreviewJuros.innerHTML = `
+                        • Plano: <b>${parcelas}x de R$ ${vParcela.toFixed(2).replace('.',',')}</b><br>
+                        • Juros Aplicados: <span style="color:#ff4d4d;">+${(taxaFinal*100).toFixed(1)}%</span><br>
+                        • Total Ajustado: <b>R$ ${valorFinalCalculado.toFixed(2).replace('.',',')}</b>
+                    `;
+                }
+                txtPreviewJuros.style.display = "block";
+            } else {
+                txtPreviewJuros.style.display = "none";
+            }
         }
 
         btnFecharPedido.addEventListener("click", async () => {
-            if(!emailUsuarioLogado) return;
-            if(carrinhoLocal.length === 0) { alert("Carrinho vazio."); return; }
-
+            if(carrinhoLocal.length === 0) {
+                alert("Seu carrinho de compras está vazio!");
+                return;
+            }
+            
             btnFecharPedido.disabled = true;
-            let sucessoEstoque = true;
-            const objItens = {};
-            let valorTotal = 0;
+            btnFecharPedido.innerText = "Salvando transação...";
 
+            let objItensLote = {};
+            let totalBasePedido = 0;
+            let falhaEstoqueDetectada = false;
+
+            // Transação de segurança item por item para garantir integridade do estoque
             for(const item of carrinhoLocal) {
-                const estoqueRef = ref(db, `produtos/${item.id}/estoque`);
-                let erroFalta = false;
-
-                await runTransaction(estoqueRef, (atual) => {
-                    if(atual === null) return atual;
-                    if(atual < item.whitespace || atual < item.quantidade) { erroFalta = true; return atual; }
-                    return atual - item.quantidade;
+                let esgotou = false;
+                await runTransaction(ref(db, `produtos/${item.id}/estoque`), (estoqueAtual) => {
+                    if(estoqueAtual === null) return 0;
+                    if(estoqueAtual < item.quantidade) { 
+                        esgotou = true; 
+                        return estoqueAtual; 
+                    }
+                    return estoqueAtual - item.quantidade;
                 });
 
-                if(erroFalta) {
-                    alert(`O item "${item.nome}" mudou de estoque disponível.`);
-                    sucessoEstoque = false; break;
+                if(esgotou) {
+                    falhaEstoqueDetectada = true;
+                    alert(`Infelizmente a mercadoria [${item.nome}] esgotou enquanto você finalizava a compra.`);
+                    break;
                 }
 
-                objItens[item.id] = { nome: item.nome, quantidade: item.whitespace || item.quantidade, precoUnitario: item.preco };
-                valorTotal += (item.preco * item.quantidade);
+                objItensLote[item.id] = {
+                    nome: item.nome,
+                    quantidade: item.quantidade,
+                    precoUnitario: item.preco
+                };
+                totalBasePedido += (item.preco * item.quantidade);
             }
 
-            if(!sucessoEstoque) { btnFecharPedido.disabled = false; return; }
-
-            try {
-                const novoPedidoRef = push(ref(db, "pedidos"));
-                const d = new Date();
-                const dataStr = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-
-                await set(novoPedidoRef, {
-                    email: emailUsuarioLogado,
-                    total: valorTotal,
-                    status: "pendente",
-                    data: dataStr,
-                    itens: objItens
-                });
-
-                alert("Pedido enviado para análise!");
-                carrinhoLocal = [];
-                atualizarCarrinhoVisual();
-            } catch(e) {
-                alert("Erro ao salvar.");
-            } finally {
+            if(falhaEstoqueDetectada) {
                 btnFecharPedido.disabled = false;
+                btnFecharPedido.innerText = "Confirmar Pedido 🚀";
+                return;
             }
+
+            // Define valores finais de faturamento com base no que o cliente escolheu
+            let numParcelas = 1;
+            let valorFaturadoFinal = totalBasePedido;
+
+            if(selectMetodo.value === "credito") {
+                numParcelas = parseInt(selectParcelas.value || 1);
+                if(numParcelas > 6) {
+                    let excedentes = numParcelas - 6;
+                    valorFaturadoFinal = totalBasePedido * (1 + ((taxaAcrescimoConfig / 100) * excedentes));
+                }
+            }
+
+            const novoPedidoRef = push(ref(db, "pedidos"));
+            await set(novoPedidoRef, {
+                email: emailUsuarioLogado,
+                total: totalBasePedido,
+                status: "pendente",
+                data: new Date().toLocaleString('pt-BR'),
+                itens: objItensLote,
+                faturamento: {
+                    formaPagamento: selectMetodo.value,
+                    parcelas: numParcelas,
+                    valorFaturado: valorFaturadoFinal
+                }
+            });
+
+            alert("Seu pedido foi registrado e encaminhado para separação!");
+            carrinhoLocal = [];
+            atualizarCarrinhoVisual();
+            btnFecharPedido.disabled = false;
+            btnFecharPedido.innerText = "Confirmar Pedido 🚀";
         });
     </script>
 </body>
