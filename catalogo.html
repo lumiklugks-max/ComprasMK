@@ -287,7 +287,6 @@
             cursor: not-allowed;
         }
     </style>
-</script>
 </head>
 <body>
 
@@ -306,7 +305,7 @@
         </div>
 
         <div class="carrinho-lateral">
-            <h2>🛍| Meu Carrinho</h2>
+            <h2>🛍️ Meu Carrinho</h2>
             <div id="carrinho-itens">
                 <p style="color: #666; font-style: italic; font-size: 13px;">Nenhum item selecionado</p>
             </div>
@@ -366,7 +365,7 @@
         const containerCarrinhoItens = document.getElementById("carrinho-itens");
         const txtCarrinhoTotal = document.getElementById("carrinho-total");
 
-        // Preenche o seletor de parcelas de 1x até 12x de forma limpa via JS
+        // Preenche o seletor de parcelas de 1x até 12x
         function popularSeletorParcelas() {
             selectParcelas.innerHTML = "";
             for (let i = 1; i <= 12; i++) {
@@ -384,6 +383,40 @@
         }
         popularSeletorParcelas();
 
+        // FUNÇÃO CORRIGIDA: Validação robusta e multi-chave de login local
+        function verificarSessaoUsuario() {
+            // Tenta obter de chaves comuns que o formulário de login pode ter salvo
+            let emailSalvo = localStorage.getItem("email_logado") || 
+                             localStorage.getItem("usuario_logado") || 
+                             localStorage.getItem("email") ||
+                             localStorage.getItem("userEmail");
+
+            if (emailSalvo && emailSalvo.trim() !== "" && emailSalvo !== "null" && emailSalvo !== "undefined") {
+                emailUsuarioLogado = emailSalvo.trim().toLowerCase();
+                txtUsuarioSessao.innerText = `Logado como: ${emailUsuarioLogado}`;
+                txtUsuarioSessao.style.color = "#00ff66";
+                txtUsuarioSessao.style.borderColor = "rgba(0, 255, 102, 0.3)";
+                txtUsuarioSessao.style.backgroundColor = "rgba(0, 255, 102, 0.05)";
+                
+                btnFecharPedido.disabled = false;
+                btnFecharPedido.innerText = "Confirmar Pedido 🚀";
+                document.getElementById("area-pagamento").style.display = "flex";
+                return true;
+            } else {
+                // Força o estado deslogado visível caso falhe
+                emailUsuarioLogado = "";
+                txtUsuarioSessao.innerText = "⚠️ Usuário não identificado!";
+                txtUsuarioSessao.style.color = "#ff4d4d";
+                btnFecharPedido.disabled = true;
+                btnFecharPedido.innerText = "Faça Login Primeiro";
+                document.getElementById("area-pagamento").style.display = "none";
+                return false;
+            }
+        }
+
+        // Executa a validação imediatamente na inicialização
+        verificarSessaoUsuario();
+
         // Monitoramento da taxa de juros definida pela administração
         onValue(ref(db, "configuracoes/taxa_juros"), (snap) => {
             if(snap.exists()) {
@@ -391,16 +424,6 @@
                 recalcularSimulacao();
             }
         });
-
-        // Verificação e validação rígida de login persistente do usuário
-        if (localStorage.getItem("email_logado")) {
-            emailUsuarioLogado = localStorage.getItem("email_logado").trim().toLowerCase();
-            txtUsuarioSessao.innerText = `Logado como: ${emailUsuarioLogado}`;
-            txtUsuarioSessao.style.color = "#00ff66";
-            btnFecharPedido.disabled = false;
-            btnFecharPedido.innerText = "Confirmar Pedido 🚀";
-            document.getElementById("area-pagamento").style.display = "flex";
-        }
 
         document.getElementById("btn-logout").addEventListener("click", () => {
             localStorage.clear();
@@ -434,6 +457,9 @@
                 card.className = "produto-card";
                 const estoque = parseInt(p.estoque || 0);
 
+                // Garante que a validação de login reflete nos botões de adicionar
+                const loginAtivo = emailUsuarioLogado !== "";
+
                 card.innerHTML = `
                     <img src="${p.imagem || 'https://via.placeholder.com/250'}" class="produto-img">
                     <div class="produto-info">
@@ -444,13 +470,13 @@
                         <span class="produto-preco">R$ ${parseFloat(p.preco || 0).toFixed(2).replace('.', ',')}</span>
                         <span class="produto-estoque">Disp: ${estoque} un</span>
                     </div>
-                    <button class="btn-add-carrinho" ${estoque <= 0 || !emailUsuarioLogado ? 'disabled' : ''} id="btn-add-${id}">
+                    <button class="btn-add-carrinho" ${estoque <= 0 || !loginAtivo ? 'disabled' : ''} id="btn-add-${id}">
                         ${estoque <= 0 ? '🚫 Esgotado' : '➕ Adicionar ao Pedido'}
                     </button>
                 `;
                 containerProdutos.appendChild(card);
                 
-                if(estoque > 0 && emailUsuarioLogado) {
+                if(estoque > 0 && loginAtivo) {
                     document.getElementById(`btn-add-${id}`).addEventListener("click", () => adicionarItemAoCarrinho(id));
                 }
             });
@@ -551,6 +577,12 @@
         }
 
         btnFecharPedido.addEventListener("click", async () => {
+            // Re-valida o login no exato momento do clique para evitar burlar o botão desativado
+            if(!verificarSessaoUsuario()) {
+                alert("Operação negada: Você precisa realizar o login primeiro!");
+                return;
+            }
+
             if(carrinhoLocal.length === 0) {
                 alert("Seu carrinho de compras está vazio!");
                 return;
@@ -563,7 +595,6 @@
             let totalBasePedido = 0;
             let falhaEstoqueDetectada = false;
 
-            // Transação de segurança item por item para garantir integridade do estoque
             for(const item of carrinhoLocal) {
                 let esgotou = false;
                 await runTransaction(ref(db, `produtos/${item.id}/estoque`), (estoqueAtual) => {
@@ -595,7 +626,6 @@
                 return;
             }
 
-            // Define valores finais de faturamento com base no que o cliente escolheu
             let numParcelas = 1;
             let valorFaturadoFinal = totalBasePedido;
 
