@@ -16,7 +16,6 @@
             align-items: center;
         }
 
-        /* CONTAINER PRINCIPAL DO SITE */
         .main-container {
             max-width: 1200px;
             width: 100%;
@@ -26,14 +25,12 @@
             margin-top: 20px;
         }
 
-        /* RESPONSIVIDADE PARA TELAS MENORES / CELULAR */
         @media (max-width: 900px) {
             .main-container {
                 grid-template-columns: 1fr;
             }
         }
 
-        /* TOPO DO SITE */
         .header-catalogo {
             width: 100%;
             max-width: 1200px;
@@ -50,10 +47,15 @@
             color: #00d2ff;
         }
 
+        .controles-topo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         .usuario-logado-info {
             font-size: 14px;
             color: #aaaaaa;
-            margin-right: 15px;
         }
 
         .btn-meus-pedidos {
@@ -70,7 +72,21 @@
             background-color: rgba(0, 210, 255, 0.1);
         }
 
-        /* GRID DE PRODUTOS CORRIGIDA (PC vs MOBILE) */
+        .btn-sair {
+            background-color: rgba(255, 77, 77, 0.1);
+            color: #ff4d4d;
+            border: 1px solid #ff4d4d;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-sair:hover {
+            background-color: #ff4d4d;
+            color: #0b0c10;
+        }
+
         .produtos-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -156,7 +172,6 @@
             cursor: not-allowed;
         }
 
-        /* CAIXA DO CARRINHO LATERAL */
         .carrinho-lateral {
             background-color: #12171e;
             border: 1px solid #2c3540;
@@ -190,7 +205,6 @@
             font-size: 14px;
         }
 
-        /* CONTROLADORES DE QUANTIDADE */
         .controles-qtd {
             display: flex;
             align-items: center;
@@ -276,9 +290,10 @@
 
     <div class="header-catalogo">
         <h1 id="titulo-secreto" style="cursor: default; user-select: none;">🛒 Nosso Catálogo Comercial</h1>
-        <div>
+        <div class="controles-topo">
             <span class="usuario-logado-info" id="txt-usuario-sessao">Identificando usuário...</span>
             <a href="meus_pedidos.html" class="btn-meus-pedidos">📦 Meus Pedidos</a>
+            <button class="btn-sair" id="btn-logout">Sair 🚪</button>
         </div>
     </div>
 
@@ -330,8 +345,16 @@
         const txtTotal = document.getElementById("carrinho-total");
         const txtUsuarioSessao = document.getElementById("txt-usuario-sessao");
         const btnFecharPedido = document.getElementById("btn-fechar-pedido");
+        const btnLogout = document.getElementById("btn-logout");
 
-        // --- CAPTURA RÍGIDA DO USUÁRIO LOGADO NA TELA DE LOGIN ANTERIOR ---
+        // --- SISTEMA DE LOGOUT REAL E TOTAL ---
+        btnLogout.addEventListener("click", () => {
+            if(confirm("Deseja realmente encerrar sua sessão e deslogar desta conta?")) {
+                localStorage.clear(); // Limpa carrinho recuperado, e-mail da sessão e travas
+                window.location.href = "login.html"; // Mude para o nome correto do seu arquivo de login primário
+            }
+        });
+
         if (localStorage.getItem("email_logado")) {
             emailUsuarioLogado = localStorage.getItem("email_logado").trim().toLowerCase();
             txtUsuarioSessao.innerText = `Logado como: ${emailUsuarioLogado}`;
@@ -342,33 +365,28 @@
             btnFecharPedido.innerText = "Faça Login Primeiro";
         }
 
-        // --- VERIFICA SE HÁ PRODUTOS DE UMA EDIÇÃO ANTERIOR SALVOS ---
         if (localStorage.getItem("carrinho_recuperado")) {
             try {
                 carrinhoLocal = JSON.parse(localStorage.getItem("carrinho_recuperado"));
                 localStorage.removeItem("carrinho_recuperado");
             } catch (e) {
-                console.error("Erro ao processar reabertura do carrinho:", e);
+                console.error(e);
             }
         }
 
-        // --- BACKDOOR DE ACESSO ADMIN SEGRETO ---
         let cliquesAdmin = 0;
         document.getElementById("titulo-secreto").addEventListener("click", () => {
             cliquesAdmin++;
-            if (cliquesAdmin >= 5) {
-                window.location.href = "admin_pedidos.html";
-            }
+            if (cliquesAdmin >= 5) window.location.href = "admin_pedidos.html";
         });
 
-        // --- OBSERVA PRODUTOS EM TEMPO REAL NO FIREBASE (SINCRONIZAÇÃO EM DISPOSITIVOS DE TERCEIROS) ---
         onValue(ref(db, "produtos"), (snapshot) => {
             if(snapshot.exists()){
                 bancoProdutos = snapshot.val();
                 renderizarProdutos();
                 atualizarCarrinhoVisual();
             } else {
-                containerProdutos.innerHTML = "<p id='msg-carregando'>Nenhum produto cadastrado no momento.</p>";
+                containerProdutos.innerHTML = "<p id='msg-carregando'>Nenhum produto cadastrado.</p>";
             }
         });
 
@@ -412,7 +430,7 @@
 
             if(itemExistente) {
                 if(itemExistente.quantidade + 1 > parseInt(prod.estoque)) {
-                    alert("Limite de estoque atingido para este produto!");
+                    alert("Limite de estoque atingido!");
                     return;
                 }
                 itemExistente.quantidade++;
@@ -438,7 +456,7 @@
                 carrinhoLocal = carrinhoLocal.filter(i => i.id !== id);
             } else {
                 if (prodOriginal && novaQuantidade > parseInt(prodOriginal.estoque)) {
-                    alert("Quantidade indisponível no estoque comercial no momento.");
+                    alert("Quantidade indisponível.");
                     return;
                 }
                 item.quantidade = novaQuantidade;
@@ -481,19 +499,11 @@
             txtTotal.innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
         }
 
-        // --- FECHAMENTO DO PEDIDO ---
         btnFecharPedido.addEventListener("click", async () => {
-            if(!emailUsuarioLogado) {
-                alert("Erro crítico: Você precisa estar logado.");
-                return;
-            }
-            if(carrinhoLocal.length === 0) {
-                alert("O seu carrinho está completamente vazio.");
-                return;
-            }
+            if(!emailUsuarioLogado) return;
+            if(carrinhoLocal.length === 0) { alert("Carrinho vazio."); return; }
 
             btnFecharPedido.disabled = true;
-
             let sucessoEstoque = true;
             const objItens = {};
             let valorTotal = 0;
@@ -504,31 +514,20 @@
 
                 await runTransaction(estoqueRef, (atual) => {
                     if(atual === null) return atual;
-                    if(atual < item.quantidade) {
-                        erroFalta = true;
-                        return atual;
-                    }
+                    if(atual < item.whitespace || atual < item.quantidade) { erroFalta = true; return atual; }
                     return atual - item.quantidade;
                 });
 
                 if(erroFalta) {
-                    alert(`O item "${item.nome}" esgotou ou mudou de quantidade disponível em estoque.`);
-                    sucessoEstoque = false;
-                    break;
+                    alert(`O item "${item.nome}" mudou de estoque disponível.`);
+                    sucessoEstoque = false; break;
                 }
 
-                objItens[item.id] = {
-                    nome: item.nome,
-                    quantidade: item.quantidade,
-                    precoUnitario: item.preco
-                };
+                objItens[item.id] = { nome: item.nome, quantidade: item.whitespace || item.quantidade, precoUnitario: item.preco };
                 valorTotal += (item.preco * item.quantidade);
             }
 
-            if(!sucessoEstoque) {
-                btnFecharPedido.disabled = false;
-                return;
-            }
+            if(!sucessoEstoque) { btnFecharPedido.disabled = false; return; }
 
             try {
                 const novoPedidoRef = push(ref(db, "pedidos"));
@@ -543,12 +542,11 @@
                     itens: objItens
                 });
 
-                alert("Pedido gerado com sucesso!");
+                alert("Pedido enviado para análise!");
                 carrinhoLocal = [];
                 atualizarCarrinhoVisual();
             } catch(e) {
-                console.error(e);
-                alert("Falha ao salvar o pedido. Tente novamente.");
+                alert("Erro ao salvar.");
             } finally {
                 btnFecharPedido.disabled = false;
             }
