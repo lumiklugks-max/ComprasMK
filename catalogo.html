@@ -414,6 +414,11 @@
             }
         }
 
+        // Força a validação mesmo se a página vier restaurada do cache do navegador (Back-Forward Cache)
+        window.addEventListener('pageshow', function(event) {
+            verificarSessaoUsuario();
+        });
+
         // Executa a validação imediatamente na inicialização
         verificarSessaoUsuario();
 
@@ -430,7 +435,7 @@
             window.location.href = "login.html";
         });
 
-        // Atalho secreto do Administrador logado
+        // Atalho secreto do Administrator logado
         let cliquesAdmin = 0;
         document.getElementById("titulo-secreto").addEventListener("click", () => {
             cliquesAdmin++; 
