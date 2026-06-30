@@ -294,7 +294,7 @@
         <h1 id="titulo-secreto">🛒 Nosso Catálogo Comercial</h1>
         <div class="controles-topo">
             <span class="usuario-logado-info" id="txt-usuario-sessao">⚠️ Usuário não identificado!</span>
-            <a href="meus_pedidos.html" class="btn-meus-pedidos">📦 Meus Pedidos</a>
+            <a href="meus_pedidos.html" id="link-meus-pedidos" class="btn-meus-pedidos">📦 Meus Pedidos</a>
             <button class="btn-sair" id="btn-logout">Sair 🚪</button>
         </div>
     </div>
@@ -325,8 +325,7 @@
 
                 <div id="box-credito-opcoes" style="display: none; flex-direction: column; gap: 5px; margin-top: 5px;">
                     <label for="select-parcelas">Escolha o Parcelamento:</label>
-                    <select id="select-parcelas">
-                        </select>
+                    <select id="select-parcelas"></select>
                 </div>
                 <div class="preview-parcelas" id="txt-preview-juros"></div>
             </div>
@@ -364,8 +363,8 @@
         const containerProdutos = document.getElementById("produtos-container");
         const containerCarrinhoItens = document.getElementById("carrinho-itens");
         const txtCarrinhoTotal = document.getElementById("carrinho-total");
+        const linkMeusPedidos = document.getElementById("link-meus-pedidos");
 
-        // Preenche o seletor de parcelas de 1x até 12x
         function popularSeletorParcelas() {
             selectParcelas.innerHTML = "";
             for (let i = 1; i <= 12; i++) {
@@ -383,16 +382,33 @@
         }
         popularSeletorParcelas();
 
-        // FUNÇÃO CORRIGIDA: Validação robusta e multi-chave de login local
+        // FUNÇÃO DE SESSÃO AMPLIADA: Coleta parâmetros da URL e persiste em todos os storages
         function verificarSessaoUsuario() {
-            // Tenta obter de chaves comuns que o formulário de login pode ter salvo
+            // 1. Tenta pegar o e-mail da URL caso tenha sido passado como parâmetro de retorno (?email=...)
+            const urlParams = new URLSearchParams(window.location.search);
+            let emailURL = urlParams.get('email') || urlParams.get('user') || urlParams.get('usuario');
+
+            if (emailURL && emailURL.trim() !== "" && emailURL !== "null" && emailURL !== "undefined") {
+                localStorage.setItem("usuario_logado", emailURL.trim().toLowerCase());
+            }
+
+            // 2. Procura em cascata por chaves conhecidas em localStorage e sessionStorage
             let emailSalvo = localStorage.getItem("email_logado") || 
                              localStorage.getItem("usuario_logado") || 
                              localStorage.getItem("email") ||
-                             localStorage.getItem("userEmail");
+                             localStorage.getItem("userEmail") ||
+                             sessionStorage.getItem("email_logado") || 
+                             sessionStorage.getItem("usuario_logado") || 
+                             sessionStorage.getItem("email");
 
             if (emailSalvo && emailSalvo.trim() !== "" && emailSalvo !== "null" && emailSalvo !== "undefined") {
                 emailUsuarioLogado = emailSalvo.trim().toLowerCase();
+                
+                // Propaga para múltiplos storages para garantir que telas filhas/parentes encontrem o valor
+                localStorage.setItem("usuario_logado", emailUsuarioLogado);
+                localStorage.setItem("email_logado", emailUsuarioLogado);
+                sessionStorage.setItem("usuario_logado", emailUsuarioLogado);
+
                 txtUsuarioSessao.innerText = `Logado como: ${emailUsuarioLogado}`;
                 txtUsuarioSessao.style.color = "#00ff66";
                 txtUsuarioSessao.style.borderColor = "rgba(0, 255, 102, 0.3)";
@@ -401,28 +417,35 @@
                 btnFecharPedido.disabled = false;
                 btnFecharPedido.innerText = "Confirmar Pedido 🚀";
                 document.getElementById("area-pagamento").style.display = "flex";
+                
+                // Altera dinamicamente o link do botão "Meus Pedidos" para injetar o e-mail se necessário
+                linkMeusPedidos.href = `meus_pedidos.html?email=${encodeURIComponent(emailUsuarioLogado)}`;
+                
                 return true;
             } else {
-                // Força o estado deslogado visível caso falhe
                 emailUsuarioLogado = "";
                 txtUsuarioSessao.innerText = "⚠️ Usuário não identificado!";
                 txtUsuarioSessao.style.color = "#ff4d4d";
+                txtUsuarioSessao.style.borderColor = "rgba(255, 77, 77, 0.15)";
+                txtUsuarioSessao.style.backgroundColor = "rgba(255, 77, 77, 0.05)";
+                
                 btnFecharPedido.disabled = true;
                 btnFecharPedido.innerText = "Faça Login Primeiro";
                 document.getElementById("area-pagamento").style.display = "none";
+                linkMeusPedidos.href = "meus_pedidos.html";
                 return false;
             }
         }
 
-        // Força a validação mesmo se a página vier restaurada do cache do navegador (Back-Forward Cache)
+        // Força a execução sempre que a página ganhar foco ou reaparecer do cache (BFcache)
         window.addEventListener('pageshow', function(event) {
             verificarSessaoUsuario();
+            renderizarProdutos();
         });
 
-        // Executa a validação imediatamente na inicialização
+        // Executa imediatamente na carga da página
         verificarSessaoUsuario();
 
-        // Monitoramento da taxa de juros definida pela administração
         onValue(ref(db, "configuracoes/taxa_juros"), (snap) => {
             if(snap.exists()) {
                 taxaAcrescimoConfig = parseFloat(snap.val());
@@ -432,10 +455,10 @@
 
         document.getElementById("btn-logout").addEventListener("click", () => {
             localStorage.clear();
+            sessionStorage.clear();
             window.location.href = "login.html";
         });
 
-        // Atalho secreto do Administrator logado
         let cliquesAdmin = 0;
         document.getElementById("titulo-secreto").addEventListener("click", () => {
             cliquesAdmin++; 
@@ -444,7 +467,6 @@
             }
         });
 
-        // Escuta em tempo real da lista de mercadorias no banco de dados
         onValue(ref(db, "produtos"), (snapshot) => {
             if(snapshot.exists()){ 
                 bancoProdutos = snapshot.val(); 
@@ -461,8 +483,6 @@
                 const card = document.createElement("div");
                 card.className = "produto-card";
                 const estoque = parseInt(p.estoque || 0);
-
-                // Garante que a validação de login reflete nos botões de adicionar
                 const loginAtivo = emailUsuarioLogado !== "";
 
                 card.innerHTML = `
@@ -476,7 +496,7 @@
                         <span class="produto-estoque">Disp: ${estoque} un</span>
                     </div>
                     <button class="btn-add-carrinho" ${estoque <= 0 || !loginAtivo ? 'disabled' : ''} id="btn-add-${id}">
-                        ${estoque <= 0 ? '🚫 Esgotado' : '➕ Adicionar ao Pedido'}
+                        ${!loginAtivo ? '🔒 Faça Login Primeiro' : (estoque <= 0 ? '🚫 Esgotado' : '➕ Adicionar ao Pedido')}
                     </button>
                 `;
                 containerProdutos.appendChild(card);
@@ -582,7 +602,6 @@
         }
 
         btnFecharPedido.addEventListener("click", async () => {
-            // Re-valida o login no exato momento do clique para evitar burlar o botão desativado
             if(!verificarSessaoUsuario()) {
                 alert("Operação negada: Você precisa realizar o login primeiro!");
                 return;
