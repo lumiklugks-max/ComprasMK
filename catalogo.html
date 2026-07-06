@@ -382,29 +382,52 @@
         }
         popularSeletorParcelas();
 
-        // FUNÇÃO DE SESSÃO AMPLIADA: Coleta parâmetros da URL e persiste em todos os storages
+        // NOVA FUNÇÃO ULTRA-TOLERANTE DE VERIFICAÇÃO DE SESSÃO
         function verificarSessaoUsuario() {
-            // 1. Tenta pegar o e-mail da URL caso tenha sido passado como parâmetro de retorno (?email=...)
+            // Captura parâmetros da URL (Caso você use "catalogo.html?email=seuemail@teste.com")
             const urlParams = new URLSearchParams(window.location.search);
-            let emailURL = urlParams.get('email') || urlParams.get('user') || urlParams.get('usuario');
+            let emailDaURL = urlParams.get('email') || urlParams.get('user') || urlParams.get('usuario');
 
-            if (emailURL && emailURL.trim() !== "" && emailURL !== "null" && emailURL !== "undefined") {
-                localStorage.setItem("usuario_logado", emailURL.trim().toLowerCase());
+            if (emailDaURL && emailDaURL.trim() !== "" && emailDaURL !== "null" && emailDaURL !== "undefined") {
+                let limpo = emailDaURL.trim().toLowerCase();
+                localStorage.setItem("usuario_logado", limpo);
+                localStorage.setItem("email_logado", limpo);
+                sessionStorage.setItem("usuario_logado", limpo);
             }
 
-            // 2. Procura em cascata por chaves conhecidas em localStorage e sessionStorage
-            let emailSalvo = localStorage.getItem("email_logado") || 
-                             localStorage.getItem("usuario_logado") || 
-                             localStorage.getItem("email") ||
-                             localStorage.getItem("userEmail") ||
-                             sessionStorage.getItem("email_logado") || 
-                             sessionStorage.getItem("usuario_logado") || 
-                             sessionStorage.getItem("email");
+            // Faz uma varredura geral em todas as chaves possíveis em busca de algo que se pareça com um e-mail válido
+            let emailDetectado = "";
+            
+            const chavesParaBuscar = [
+                "usuario_logado", "email_logado", "email", "userEmail", 
+                "usuario", "user", "login", "cliente", "emailCliente"
+            ];
 
-            if (emailSalvo && emailSalvo.trim() !== "" && emailSalvo !== "null" && emailSalvo !== "undefined") {
-                emailUsuarioLogado = emailSalvo.trim().toLowerCase();
+            // Varre o localStorage
+            for (let chave of chavesParaBuscar) {
+                let valor = localStorage.getItem(chave);
+                if (valor && valor.includes("@") && valor.trim() !== "" && valor !== "null" && valor !== "undefined") {
+                    emailDetectado = valor.trim().toLowerCase();
+                    break;
+                }
+            }
+
+            // Se não achou no localStorage, tenta no sessionStorage
+            if (!emailDetectado) {
+                for (let chave of chavesParaBuscar) {
+                    let valor = sessionStorage.getItem(chave);
+                    if (valor && valor.includes("@") && valor.trim() !== "" && valor !== "null" && valor !== "undefined") {
+                        emailDetectado = valor.trim().toLowerCase();
+                        break;
+                    }
+                }
+            }
+
+            // Se obteve sucesso em encontrar um e-mail em qualquer canto da memória do navegador:
+            if (emailDetectado) {
+                emailUsuarioLogado = emailDetectado;
                 
-                // Propaga para múltiplos storages para garantir que telas filhas/parentes encontrem o valor
+                // Unifica as memórias para evitar problemas futuros de leitura
                 localStorage.setItem("usuario_logado", emailUsuarioLogado);
                 localStorage.setItem("email_logado", emailUsuarioLogado);
                 sessionStorage.setItem("usuario_logado", emailUsuarioLogado);
@@ -418,11 +441,12 @@
                 btnFecharPedido.innerText = "Confirmar Pedido 🚀";
                 document.getElementById("area-pagamento").style.display = "flex";
                 
-                // Altera dinamicamente o link do botão "Meus Pedidos" para injetar o e-mail se necessário
+                // Amarra dinamicamente o e-mail no botão "Meus Pedidos" para ele carregar logado lá também!
                 linkMeusPedidos.href = `meus_pedidos.html?email=${encodeURIComponent(emailUsuarioLogado)}`;
                 
                 return true;
             } else {
+                // Caso não ache nenhum e-mail, mantém bloqueado
                 emailUsuarioLogado = "";
                 txtUsuarioSessao.innerText = "⚠️ Usuário não identificado!";
                 txtUsuarioSessao.style.color = "#ff4d4d";
@@ -437,13 +461,17 @@
             }
         }
 
-        // Força a execução sempre que a página ganhar foco ou reaparecer do cache (BFcache)
+        // Eventos disparados para forçar o recarregamento do login caso o usuário clique em "Voltar"
         window.addEventListener('pageshow', function(event) {
             verificarSessaoUsuario();
             renderizarProdutos();
         });
 
-        // Executa imediatamente na carga da página
+        window.addEventListener('focus', function() {
+            verificarSessaoUsuario();
+        });
+
+        // Inicialização primária
         verificarSessaoUsuario();
 
         onValue(ref(db, "configuracoes/taxa_juros"), (snap) => {
@@ -456,7 +484,8 @@
         document.getElementById("btn-logout").addEventListener("click", () => {
             localStorage.clear();
             sessionStorage.clear();
-            window.location.href = "login.html";
+            // Remove os parâmetros de e-mail da barra de endereço para deslogar completamente
+            window.location.href = window.location.pathname;
         });
 
         let cliquesAdmin = 0;
