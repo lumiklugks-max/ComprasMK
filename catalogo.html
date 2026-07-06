@@ -382,9 +382,7 @@
         }
         popularSeletorParcelas();
 
-        // NOVA FUNÇÃO ULTRA-TOLERANTE DE VERIFICAÇÃO DE SESSÃO
         function verificarSessaoUsuario() {
-            // Captura parâmetros da URL (Caso você use "catalogo.html?email=seuemail@teste.com")
             const urlParams = new URLSearchParams(window.location.search);
             let emailDaURL = urlParams.get('email') || urlParams.get('user') || urlParams.get('usuario');
 
@@ -395,7 +393,6 @@
                 sessionStorage.setItem("usuario_logado", limpo);
             }
 
-            // Faz uma varredura geral em todas as chaves possíveis em busca de algo que se pareça com um e-mail válido
             let emailDetectado = "";
             
             const chavesParaBuscar = [
@@ -403,7 +400,6 @@
                 "usuario", "user", "login", "cliente", "emailCliente"
             ];
 
-            // Varre o localStorage
             for (let chave of chavesParaBuscar) {
                 let valor = localStorage.getItem(chave);
                 if (valor && valor.includes("@") && valor.trim() !== "" && valor !== "null" && valor !== "undefined") {
@@ -412,7 +408,6 @@
                 }
             }
 
-            // Se não achou no localStorage, tenta no sessionStorage
             if (!emailDetectado) {
                 for (let chave of chavesParaBuscar) {
                     let valor = sessionStorage.getItem(chave);
@@ -423,11 +418,9 @@
                 }
             }
 
-            // Se obteve sucesso em encontrar um e-mail em qualquer canto da memória do navegador:
             if (emailDetectado) {
                 emailUsuarioLogado = emailDetectado;
                 
-                // Unifica as memórias para evitar problemas futuros de leitura
                 localStorage.setItem("usuario_logado", emailUsuarioLogado);
                 localStorage.setItem("email_logado", emailUsuarioLogado);
                 sessionStorage.setItem("usuario_logado", emailUsuarioLogado);
@@ -441,12 +434,10 @@
                 btnFecharPedido.innerText = "Confirmar Pedido 🚀";
                 document.getElementById("area-pagamento").style.display = "flex";
                 
-                // Amarra dinamicamente o e-mail no botão "Meus Pedidos" para ele carregar logado lá também!
                 linkMeusPedidos.href = `meus_pedidos.html?email=${encodeURIComponent(emailUsuarioLogado)}`;
                 
                 return true;
             } else {
-                // Caso não ache nenhum e-mail, mantém bloqueado
                 emailUsuarioLogado = "";
                 txtUsuarioSessao.innerText = "⚠️ Usuário não identificado!";
                 txtUsuarioSessao.style.color = "#ff4d4d";
@@ -461,7 +452,6 @@
             }
         }
 
-        // Eventos disparados para forçar o recarregamento do login caso o usuário clique em "Voltar"
         window.addEventListener('pageshow', function(event) {
             verificarSessaoUsuario();
             renderizarProdutos();
@@ -471,7 +461,6 @@
             verificarSessaoUsuario();
         });
 
-        // Inicialização primária
         verificarSessaoUsuario();
 
         onValue(ref(db, "configuracoes/taxa_juros"), (snap) => {
@@ -484,7 +473,6 @@
         document.getElementById("btn-logout").addEventListener("click", () => {
             localStorage.clear();
             sessionStorage.clear();
-            // Remove os parâmetros de e-mail da barra de endereço para deslogar completamente
             window.location.href = window.location.pathname;
         });
 
@@ -632,7 +620,11 @@
 
         btnFecharPedido.addEventListener("click", async () => {
             if(!verificarSessaoUsuario()) {
-                alert("Operação negada: Você precisa realizar o login primeiro!");
+                emailUsuarioLogado = localStorage.getItem("usuario_logado") || localStorage.getItem("email_logado") || "";
+            }
+
+            if(!emailUsuarioLogado || emailUsuarioLogado.trim() === "" || emailUsuarioLogado === "null") {
+                alert("Operação negada: O sistema não conseguiu validar seu e-mail de login. Faça login novamente!");
                 return;
             }
 
@@ -692,7 +684,7 @@
 
             const novoPedidoRef = push(ref(db, "pedidos"));
             await set(novoPedidoRef, {
-                email: emailUsuarioLogado,
+                email: emailUsuarioLogado.trim().toLowerCase(),
                 total: totalBasePedido,
                 status: "pendente",
                 data: new Date().toLocaleString('pt-BR'),
