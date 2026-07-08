@@ -494,7 +494,14 @@
         });
 
         function renderizarProdutos() {
+            if (!containerProdutos) return;
             containerProdutos.innerHTML = "";
+            
+            if (Object.keys(bancoProdutos).length === 0) {
+                containerProdutos.innerHTML = "<p style='color: #666;'>Buscando lista de produtos ativos...</p>";
+                return;
+            }
+
             Object.keys(bancoProdutos).forEach(id => {
                 const p = bancoProdutos[id];
                 const card = document.createElement("div");
