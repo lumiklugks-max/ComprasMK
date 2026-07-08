@@ -330,16 +330,24 @@
                 <div class="preview-parcelas" id="txt-preview-juros"></div>
             </div>
 
-            <button class="btn-confirmar" id="btn-fechar-pedido" disabled>Faça Login Primeiro</button>
+            <button class="btn-confirmar" id="btn-fechar-pedido">Fazer Login Primeiro 🔑</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, push, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // Ajuste preventivo na escuta do Bfcache logo no início do script do módulo
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
 
         const firebaseConfig = {
-            apiKey: "SUA_API_KEY",
+            apiKey: "AIzaSyCZq4K95loqNKYYuPFFrMS9QcUTCQ-FYRU", // Chave recuperada do seu index.html
             authDomain: "comprasmk-241ae.firebaseapp.com",
             databaseURL: "https://comprasmk-241ae-default-rtdb.firebaseio.com",
             projectId: "comprasmk-241ae",
@@ -348,6 +356,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const auth = getAuth(app);
 
         let bancoProdutos = {};
         let carrinhoLocal = [];
@@ -382,72 +391,43 @@
         }
         popularSeletorParcelas();
 
-        function verificarSessaoUsuario() {
-            const urlParams = new URLSearchParams(window.location.search);
-            let emailDaURL = urlParams.get('email') || urlParams.get('user') || urlParams.get('usuario');
-
-            if (emailDaURL && emailDaURL.trim() !== "" && emailDaURL !== "null" && emailDaURL !== "undefined") {
-                let limpo = emailDaURL.trim().toLowerCase();
-                localStorage.setItem("usuario_logado", limpo);
-                localStorage.setItem("email_logado", limpo);
-                sessionStorage.setItem("usuario_logado", limpo);
-            }
-
-            let emailDetectado = "";
-            
-            // Lista expandida para tentar pegar qualquer vestígio de login que venha do seu outro arquivo
-            const chavesParaBuscar = [
-                "usuario_logado", "email_logado", "email", "userEmail", 
-                "usuario", "user", "login", "cliente", "emailCliente", "username", "nome"
-            ];
-
-            // 1. Procura no localStorage
-            for (let chave of chavesParaBuscar) {
-                let valor = localStorage.getItem(chave);
-                if (valor && valor.trim() !== "" && valor !== "null" && valor !== "undefined") {
-                    emailDetectado = valor.trim().toLowerCase();
-                    break;
-                }
-            }
-
-            // 2. Se não achou, procura no sessionStorage
-            if (!emailDetectado) {
-                for (let chave of chavesParaBuscar) {
-                    let valor = sessionStorage.getItem(chave);
-                    if (valor && valor.trim() !== "" && valor !== "null" && valor !== "undefined") {
-                        emailDetectado = valor.trim().toLowerCase();
-                        break;
-                    }
-                }
-            }
-
-            if (emailDetectado) {
-                emailUsuarioLogado = emailDetectado;
+        // Gerenciamento e Escuta de Sessão Automatizada com o Firebase Auth
+        onAuthStateChanged(auth, (user) => {
+            if (user && user.email) {
+                emailUsuarioLogado = user.email.trim().toLowerCase();
                 
+                // Sincroniza os Storages locais para manter compatibilidade com recursos antigos
                 localStorage.setItem("usuario_logado", emailUsuarioLogado);
                 localStorage.setItem("email_logado", emailUsuarioLogado);
                 sessionStorage.setItem("usuario_logado", emailUsuarioLogado);
 
+                // Configuração Visual de Usuário Logado
                 txtUsuarioSessao.innerText = `Logado como: ${emailUsuarioLogado}`;
                 txtUsuarioSessao.style.color = "#00ff66";
                 txtUsuarioSessao.style.borderColor = "rgba(0, 255, 102, 0.3)";
                 txtUsuarioSessao.style.backgroundColor = "rgba(0, 255, 102, 0.05)";
                 
                 btnFecharPedido.disabled = false;
+                btnFecharPedido.style.backgroundColor = "#00ff66";
+                btnFecharPedido.style.color = "#0b0c10";
                 btnFecharPedido.innerText = "Confirmar Pedido 🚀";
                 document.getElementById("area-pagamento").style.display = "flex";
                 
                 linkMeusPedidos.href = `meus_pedidos.html?email=${encodeURIComponent(emailUsuarioLogado)}`;
-                
-                return true;
             } else {
                 emailUsuarioLogado = "";
+                
+                // Limpeza preventiva de dados locais antigos se houver deslogado
+                localStorage.removeItem("usuario_logado");
+                localStorage.removeItem("email_logado");
+                sessionStorage.removeItem("usuario_logado");
+
+                // Configuração Visual de Usuário Deslogado
                 txtUsuarioSessao.innerText = "⚠️ Usuário não identificado!";
                 txtUsuarioSessao.style.color = "#ff4d4d";
                 txtUsuarioSessao.style.borderColor = "rgba(255, 77, 77, 0.15)";
                 txtUsuarioSessao.style.backgroundColor = "rgba(255, 77, 77, 0.05)";
                 
-                // Modificado: Agora vira um botão clicável se não houver login
                 btnFecharPedido.disabled = false; 
                 btnFecharPedido.style.backgroundColor = "#ff4d4d";
                 btnFecharPedido.style.color = "#0b0c10";
@@ -455,20 +435,25 @@
                 
                 document.getElementById("area-pagamento").style.display = "none";
                 linkMeusPedidos.href = "meus_pedidos.html";
-                return false;
             }
-        }
-
-        window.addEventListener('pageshow', function(event) {
-            verificarSessaoUsuario();
             renderizarProdutos();
         });
 
-        window.addEventListener('focus', function() {
-            verificarSessaoUsuario();
-        });
+        // Função mantida para compatibilidade em cliques rápidos que dependem do retorno imediato de escopo
+        function verificarSessaoUsuario() {
+            return emailUsuarioLogado !== "";
+        }
 
-        verificarSessaoUsuario();
+        window.addEventListener('focus', function() {
+            // Revalidações rápidas de foco
+            if(emailUsuarioLogado === "") {
+                const urlParams = new URLSearchParams(window.location.search);
+                let emailDaURL = urlParams.get('email') || urlParams.get('user') || urlParams.get('usuario');
+                if (emailDaURL && emailDaURL !== "null" && emailDaURL !== "undefined") {
+                     window.location.reload();
+                }
+            }
+        });
 
         onValue(ref(db, "configuracoes/taxa_juros"), (snap) => {
             if(snap.exists()) {
@@ -477,10 +462,18 @@
             }
         });
 
-        document.getElementById("btn-logout").addEventListener("click", () => {
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.href = "index.html"; // Redireciona para o login ao sair
+        document.getElementById("btn-logout").addEventListener("click", async () => {
+            try {
+                await signOut(auth);
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = "index.html"; 
+            } catch (error) {
+                console.error("Erro ao sair do sistema:", error);
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = "index.html";
+            }
         });
 
         let cliquesAdmin = 0;
@@ -507,7 +500,6 @@
                 const card = document.createElement("div");
                 card.className = "produto-card";
                 const estoque = parseInt(p.estoque || 0);
-                const loginAtivo = emailUsuarioLogado !== "";
 
                 card.innerHTML = `
                     <img src="${p.imagem || 'https://via.placeholder.com/250'}" class="produto-img">
@@ -532,7 +524,6 @@
         }
 
         function adicionarItemAoCarrinho(id) {
-            // Se tentar interagir com o carrinho sem login, joga para a tela de login
             if (!emailUsuarioLogado) {
                 alert("Você precisa fazer login para montar um pedido!");
                 window.location.href = "index.html";
@@ -633,7 +624,6 @@
         }
 
         btnFecharPedido.addEventListener("click", async () => {
-            // Se o usuário clicar no botão vermelho de login, manda de volta pra index.html
             if(!emailUsuarioLogado) {
                 window.location.href = "index.html";
                 return;
