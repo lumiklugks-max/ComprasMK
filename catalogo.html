@@ -395,23 +395,26 @@
 
             let emailDetectado = "";
             
+            // Lista expandida para tentar pegar qualquer vestígio de login que venha do seu outro arquivo
             const chavesParaBuscar = [
                 "usuario_logado", "email_logado", "email", "userEmail", 
-                "usuario", "user", "login", "cliente", "emailCliente"
+                "usuario", "user", "login", "cliente", "emailCliente", "username", "nome"
             ];
 
+            // 1. Procura no localStorage
             for (let chave of chavesParaBuscar) {
                 let valor = localStorage.getItem(chave);
-                if (valor && valor.includes("@") && valor.trim() !== "" && valor !== "null" && valor !== "undefined") {
+                if (valor && valor.trim() !== "" && valor !== "null" && valor !== "undefined") {
                     emailDetectado = valor.trim().toLowerCase();
                     break;
                 }
             }
 
+            // 2. Se não achou, procura no sessionStorage
             if (!emailDetectado) {
                 for (let chave of chavesParaBuscar) {
                     let valor = sessionStorage.getItem(chave);
-                    if (valor && valor.includes("@") && valor.trim() !== "" && valor !== "null" && valor !== "undefined") {
+                    if (valor && valor.trim() !== "" && valor !== "null" && valor !== "undefined") {
                         emailDetectado = valor.trim().toLowerCase();
                         break;
                     }
@@ -444,8 +447,12 @@
                 txtUsuarioSessao.style.borderColor = "rgba(255, 77, 77, 0.15)";
                 txtUsuarioSessao.style.backgroundColor = "rgba(255, 77, 77, 0.05)";
                 
-                btnFecharPedido.disabled = true;
-                btnFecharPedido.innerText = "Faça Login Primeiro";
+                // Modificado: Agora vira um botão clicável se não houver login
+                btnFecharPedido.disabled = false; 
+                btnFecharPedido.style.backgroundColor = "#ff4d4d";
+                btnFecharPedido.style.color = "#0b0c10";
+                btnFecharPedido.innerText = "Fazer Login Primeiro 🔑";
+                
                 document.getElementById("area-pagamento").style.display = "none";
                 linkMeusPedidos.href = "meus_pedidos.html";
                 return false;
@@ -473,7 +480,7 @@
         document.getElementById("btn-logout").addEventListener("click", () => {
             localStorage.clear();
             sessionStorage.clear();
-            window.location.href = window.location.pathname;
+            window.location.href = "index.html"; // Redireciona para o login ao sair
         });
 
         let cliquesAdmin = 0;
@@ -512,19 +519,26 @@
                         <span class="produto-preco">R$ ${parseFloat(p.preco || 0).toFixed(2).replace('.', ',')}</span>
                         <span class="produto-estoque">Disp: ${estoque} un</span>
                     </div>
-                    <button class="btn-add-carrinho" ${estoque <= 0 || !loginAtivo ? 'disabled' : ''} id="btn-add-${id}">
-                        ${!loginAtivo ? '🔒 Faça Login Primeiro' : (estoque <= 0 ? '🚫 Esgotado' : '➕ Adicionar ao Pedido')}
+                    <button class="btn-add-carrinho" ${estoque <= 0 ? 'disabled' : ''} id="btn-add-${id}">
+                        ${estoque <= 0 ? '🚫 Esgotado' : '➕ Adicionar ao Pedido'}
                     </button>
                 `;
                 containerProdutos.appendChild(card);
                 
-                if(estoque > 0 && loginAtivo) {
+                if(estoque > 0) {
                     document.getElementById(`btn-add-${id}`).addEventListener("click", () => adicionarItemAoCarrinho(id));
                 }
             });
         }
 
         function adicionarItemAoCarrinho(id) {
+            // Se tentar interagir com o carrinho sem login, joga para a tela de login
+            if (!emailUsuarioLogado) {
+                alert("Você precisa fazer login para montar um pedido!");
+                window.location.href = "index.html";
+                return;
+            }
+
             const prod = bancoProdutos[id];
             const itemExistente = carrinhoLocal.find(i => i.id === id);
             
@@ -619,12 +633,9 @@
         }
 
         btnFecharPedido.addEventListener("click", async () => {
-            if(!verificarSessaoUsuario()) {
-                emailUsuarioLogado = localStorage.getItem("usuario_logado") || localStorage.getItem("email_logado") || "";
-            }
-
-            if(!emailUsuarioLogado || emailUsuarioLogado.trim() === "" || emailUsuarioLogado === "null") {
-                alert("Operação negada: O sistema não conseguiu validar seu e-mail de login. Faça login novamente!");
+            // Se o usuário clicar no botão vermelho de login, manda de volta pra index.html
+            if(!emailUsuarioLogado) {
+                window.location.href = "index.html";
                 return;
             }
 
