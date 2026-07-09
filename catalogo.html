@@ -493,7 +493,7 @@
             }
         });
 
-        function renderizarProdutos() {
+function renderizarProdutos() {
             if (!containerProdutos) return;
             containerProdutos.innerHTML = "";
             
@@ -507,6 +507,18 @@
                 const card = document.createElement("div");
                 card.className = "produto-card";
                 const estoque = parseInt(p.estoque || 0);
+                
+                // Pega o link customizado se ele existir, senão deixa vazio
+                const linkCustomizado = p.linkWpp || "";
+
+                // Se houver link customizado, o botão muda o texto para "Comprar Agora"
+                // Caso contrário, mantém o padrão "Adicionar ao Pedido"
+                let textoBotao = '➕ Adicionar ao Pedido';
+                if (linkCustomizado) {
+                    textoBotao = '🚀 Comprar Agora';
+                } else if (estoque <= 0) {
+                    textoBotao = '🚫 Esgotado';
+                }
 
                 card.innerHTML = `
                     <img src="${p.imagem || 'https://via.placeholder.com/250'}" class="produto-img">
@@ -518,11 +530,26 @@
                         <span class="produto-preco">R$ ${parseFloat(p.preco || 0).toFixed(2).replace('.', ',')}</span>
                         <span class="produto-estoque">Disp: ${estoque} un</span>
                     </div>
-                    <button class="btn-add-carrinho" ${estoque <= 0 ? 'disabled' : ''} id="btn-add-${id}">
-                        ${estoque <= 0 ? '🚫 Esgotado' : '➕ Adicionar ao Pedido'}
+                    <button class="btn-add-carrinho" ${estoque <= 0 && !linkCustomizado ? 'disabled' : ''}>
+                        ${textoBotao}
                     </button>
                 `;
+
+                // Configura a ação do clique de forma segura e sem depender de IDs no botão
+                const botaoAcao = card.querySelector(".btn-add-carrinho");
+                botaoAcao.addEventListener("click", () => {
+                    if (linkCustomizado) {
+                        // Abre o link do WhatsApp/Checkout direto em uma nova aba
+                        window.open(linkCustomizado, '_blank');
+                    } else {
+                        // Comportamento original: joga para o carrinho lateral
+                        adicionarItemAoCarrinho(id);
+                    }
+                });
+
                 containerProdutos.appendChild(card);
+            });
+        }
                 
                 if(estoque > 0) {
                     document.getElementById(`btn-add-${id}`).addEventListener("click", () => adicionarItemAoCarrinho(id));
