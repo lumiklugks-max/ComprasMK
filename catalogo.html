@@ -345,12 +345,14 @@
             }
         });
 
+        // Configurações reais extraídas do seu projeto "cadastroteste047"
         const firebaseConfig = {
             apiKey: "AIzaSyCZq4K95loqNKYYuPFFrMS9QcUTCQ-FYRU",
-            authDomain: "comprasmk-241ae.firebaseapp.com",
-            databaseURL: "https://comprasmk-241ae-default-rtdb.firebaseio.com",
-            projectId: "comprasmk-241ae",
-            storageBucket: "comprasmk-241ae.appspot.com"
+            authDomain: "cadastroteste047.firebaseapp.com",
+            databaseURL: "https://cadastroteste047-default-rtdb.firebaseio.com",
+            projectId: "cadastroteste047",
+            storageBucket: "cadastroteste047.appspot.com",
+            appId: "1:908890693829:web:2bd31d2447e27507310ac"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -433,20 +435,6 @@
             renderizarProdutos();
         });
 
-        function verificarSessaoUsuario() {
-            return emailUsuarioLogado !== "";
-        }
-
-        window.addEventListener('focus', function() {
-            if(emailUsuarioLogado === "") {
-                const urlParams = new URLSearchParams(window.location.search);
-                let emailDaURL = urlParams.get('email') || urlParams.get('user') || urlParams.get('usuario');
-                if (emailDaURL && emailDaURL !== "null" && emailDaURL !== "undefined") {
-                     window.location.reload();
-                }
-            }
-        });
-
         onValue(ref(db, "configuracoes/taxa_juros"), (snap) => {
             if(snap.exists()) {
                 taxaAcrescimoConfig = parseFloat(snap.val());
@@ -500,7 +488,7 @@
                 card.className = "produto-card";
                 const estoque = parseInt(p.estoque || 0);
                 
-                const linkCustomizado = p.linkWpp || "";
+                const linkCustomizado = p.linkWpp || p.linkCheckout || "";
 
                 let textoBotao = '➕ Adicionar ao Pedido';
                 if (linkCustomizado) {
