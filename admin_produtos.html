@@ -257,12 +257,6 @@
                     <label for="imagem">URL da Imagem do Produto *</label>
                     <input type="url" id="imagem" placeholder="https://linkdaimagem.com/foto.jpg" required>
                 </div>
-                
-                <div class="form-group-full">
-                    <label for="linkWpp">Link de Checkout / WhatsApp Personalizado (Opcional)</label>
-                    <input type="url" id="linkWpp" placeholder="https://wa.me/55... ou link de pagamento">
-                </div>
-
                 <div class="form-group-full">
                     <label for="descricao">Descrição Detalhada do Produto</label>
                     <textarea id="descricao" placeholder="Descreva as especificações, tamanhos, cores ou detalhes técnicos do item..."></textarea>
@@ -285,6 +279,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, push, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+        // Deixe com as chaves exatas do seu projeto ComprasMK
         const firebaseConfig = {
             apiKey: "SUA_API_KEY",
             authDomain: "comprasmk-241ae.firebaseapp.com",
@@ -298,7 +293,7 @@
 
         const produtosListaContainer = document.getElementById("produtos-lista");
 
-        // --- EXIBIÇÃO EM TEMPO REAL DOS PRODUTOS ---
+        // --- SUCESSÃO EM TEMPO REAL DOS PRODUTOS DO BANCO ---
         onValue(ref(db, "produtos"), (snapshot) => {
             produtosListaContainer.innerHTML = "";
             
@@ -341,9 +336,10 @@
                         if (action === "aumentar") {
                             novoEstoque += 1;
                         } else if (action === "diminuir") {
-                            novoEstoque = Math.max(0, novoEstoque - 1);
+                            novoEstoque = Math.max(0, novoEstoque - 1); // Não deixa ficar negativo
                         }
 
+                        // Atualiza apenas o nó do estoque no Firebase
                         update(ref(db, `produtos/${id}`), { estoque: novoEstoque });
                     });
                 });
@@ -370,7 +366,6 @@
             let precoValue = document.getElementById("preco").value.trim();
             const estoqueValue = document.getElementById("estoque").value;
             const imagemValue = document.getElementById("imagem").value.trim();
-            const linkWppValue = document.getElementById("linkWpp").value.trim(); // Captura o novo campo
             const descricaoValue = document.getElementById("descricao").value.trim();
 
             precoValue = precoValue.replace(',', '.');
@@ -386,13 +381,11 @@
                 const produtosRef = ref(db, "produtos");
                 const novoProdutoRef = push(produtosRef);
 
-                // Salvando o novo objeto contendo a propriedade 'linkWpp'
                 await set(novoProdutoRef, {
                     nome: nomeValue,
                     preco: precoNum,
                     estoque: estoqueNum,
                     imagem: imagemValue,
-                    linkWpp: linkWppValue || "", // Se vazio, salva como texto sem quebrar a estrutura
                     descricao: descricaoValue
                 });
 
