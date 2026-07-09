@@ -363,18 +363,25 @@
         let emailUsuarioLogado = "";
         let taxaAcrescimoConfig = 2.5;
 
-        // Proteção dupla para suportar a tradução nativa do seu navegador
-        const txtUsuarioSessao = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("txt-usuario-sessao") : document.getElementById("txt-usuario-sessao");
-        const btnFecharPedido = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("btn-fechar-pedido") : document.getElementById("btn-fechar-pedido");
-        const selectMetodo = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("select-metodo") : document.getElementById("select-metodo");
-        const selectParcelas = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("select-parcelas") : document.getElementById("select-parcelas");
-        const boxCreditoOpcoes = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("box-credito-opcoes") : document.getElementById("box-credito-opcoes");
-        const txtPreviewJuros = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("txt-preview-juros") : document.getElementById("txt-preview-juros");
-        const containerProdutos = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("produtos-container") : document.getElementById("produtos-container");
-        const containerCarrinhoItens = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("carrinho-itens") : document.getElementById("carrinho-itens");
-        const txtCarrinhoTotal = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("carrinho-total") : document.getElementById("carrinho-total");
-        const linkMeusPedidos = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("link-meus-pedidos") : document.getElementById("link-meus-pedidos");
-        const areaPagamento = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("area-pagamento") : document.getElementById("area-pagamento");
+        // Seletor inteligente compatível com o interpretador nativo do seu ecossistema/traduções
+        const acharElemento = (id) => {
+            if (typeof documento !== 'undefined' && documento.obterElementoPorID) {
+                return documento.obterElementoPorID(id);
+            }
+            return document.getElementById(id);
+        };
+
+        const txtUsuarioSessao = acharElemento("txt-usuario-sessao");
+        const btnFecharPedido = acharElemento("btn-fechar-pedido");
+        const selectMetodo = acharElemento("select-metodo");
+        const selectParcelas = acharElemento("select-parcelas");
+        const boxCreditoOpcoes = acharElemento("box-credito-opcoes");
+        const txtPreviewJuros = acharElemento("txt-preview-juros");
+        const containerProdutos = acharElemento("produtos-container");
+        const containerCarrinhoItens = acharElemento("carrinho-itens");
+        const txtCarrinhoTotal = acharElemento("carrinho-total");
+        const linkMeusPedidos = acharElemento("link-meus-pedidos");
+        const areaPagamento = acharElemento("area-pagamento");
 
         function popularSeletorParcelas() {
             if(!selectParcelas) return;
@@ -451,7 +458,7 @@
             }
         });
 
-        const btnLogoutElement = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("btn-logout") : document.getElementById("btn-logout");
+        const btnLogoutElement = acharElemento("btn-logout");
         if(btnLogoutElement) {
             btnLogoutElement.addEventListener("click", async () => {
                 try {
@@ -467,7 +474,7 @@
             });
         }
 
-        const tituloSecretoElement = (typeof documento !== 'undefined' && documento.obterElementoPorID) ? documento.obterElementoPorID("titulo-secreto") : document.getElementById("titulo-secreto");
+        const tituloSecretoElement = acharElemento("titulo-secreto");
         if(tituloSecretoElement) {
             let cliquesAdmin = 0;
             tituloSecretoElement.addEventListener("click", () => {
@@ -498,14 +505,19 @@
 
             Object.keys(bancoProdutos).forEach(id => {
                 const p = bancoProdutos[id];
-                if (!p) return; // Proteção extra caso o nó esteja corrompido
+                if (!p) return; 
 
                 const card = document.createElement("div");
                 card.className = "produto-card";
                 const estoque = parseInt(p.estoque || 0);
                 
-                // AJUSTE SEGURO: Verifica se a propriedade existe antes de ler, evitando o travamento
-                const linkCustomizado = (p.linkWpp || p.linkCheckout || "").trim();
+                // CORREÇÃO CIRÚRGICA: Tratamento robusto para campos nulos, ausentes ou indefinidos
+                let linkCustomizado = "";
+                if (p.linkWpp !== undefined && p.linkWpp !== null) {
+                    linkCustomizado = String(p.linkWpp).trim();
+                } else if (p.linkCheckout !== undefined && p.linkCheckout !== null) {
+                    linkCustomizado = String(p.linkCheckout).trim();
+                }
 
                 let textoBotao = '➕ Adicionar ao Pedido';
                 if (linkCustomizado !== "") {
@@ -635,9 +647,15 @@
                     }
                 } else {
                     let parcelasExcedentes = parcelas - 6;
-                    let taxaFinal = (taxaAcresciacomigConfig / 100) * parcelasExcedentes;
-                    // Fallback para taxaAcrescimoConfig caso a tradução mude o nome da variável
-                    if(typeof taxaAcrescimoConfig !== 'undefined') taxaFinal = (taxaAcrescimoConfig / 100) * parcelasExcedentes;
+                    let taxaFinal = 0;
+                    
+                    if(typeof taxaAcrescimoConfig !== 'undefined') {
+                        taxaFinal = (taxaAcrescimoConfig / 100) * parcelasExcedentes;
+                    } else if(typeof taxaAcresciacomigConfig !== 'undefined') {
+                        taxaFinal = (taxaAcresciacomigConfig / 100) * parcelasExcedentes;
+                    } else {
+                        taxaFinal = (2.5 / 100) * parcelasExcedentes;
+                    }
                     
                     valorFinalCalculado = totalBase * (1 + taxaFinal);
                     let vParcela = valorFinalCalculado / parcelas;
@@ -713,7 +731,8 @@
                     numParcelas = parseInt(selectParcelas.value || 1);
                     if(numParcelas > 6) {
                         let excedentes = numParcelas - 6;
-                        let tJuros = (typeof taxaAcrescimoConfig !== 'undefined') ? taxaAcrescimoConfig : 2.5;
+                        let tJuros = 2.5;
+                        if(typeof taxaAcrescimoConfig !== 'undefined') tJuros = taxaAcrescimoConfig;
                         valorFaturadoFinal = totalBasePedido * (1 + ((tJuros / 100) * excedentes));
                     }
                 }
