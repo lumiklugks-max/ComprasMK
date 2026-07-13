@@ -3,152 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meus Pedidos</title>
+    <title>Painel Administrativo de Gerenciamento de Pedidos</title>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             background-color: #0b0c10;
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            padding: 30px 20px;
         }
 
-        .header-area {
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
             width: 100%;
-            max-width: 800px;
+        }
+
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            border-bottom: 1px solid #1f2833;
+            border-bottom: 2px solid #1f2833;
             padding-bottom: 15px;
-        }
-
-        .btn-voltar {
-            background-color: #1f2833;
-            color: #ffffff;
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 14px;
-            border: 1px solid #333;
-        }
-
-        .info-usuario-titulo {
-            font-size: 14px;
-            color: #00d2ff;
-            background-color: rgba(0, 210, 255, 0.05);
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid #00d2ff22;
-        }
-
-        .pedidos-lista {
-            width: 100%;
-            max-width: 800px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .card-pedido {
-            background-color: #1f2833;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #2c3540;
-        }
-
-        .pedido-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #333;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-
-        .status-tag {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .status-tag.pendente { background-color: rgba(255,165,0,0.2); color: #ffa500; }
-        .status-tag.concluido { background-color: rgba(0,255,102,0.2); color: #00ff66; }
-        .status-tag.efetivado { background-color: rgba(189,0,255,0.2); color: #bd00ff; }
-        .status-tag.cancelado { background-color: rgba(255,77,77,0.2); color: #ff4d4d; }
-
-        .item-linha {
-            font-size: 15px;
-            color: #ccc;
-            margin-bottom: 8px;
-        }
-
-        .pedido-footer {
-            margin-top: 15px;
-            padding-top: 12px;
-            border-top: 1px dashed #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            margin-bottom: 25px;
             flex-wrap: wrap;
             gap: 15px;
         }
 
-        .btn-acao-container {
+        .header h1 {
+            color: #00d2ff;
+            font-size: 26px;
+        }
+
+        .config-taxa {
+            background-color: #12171e;
+            border: 1px solid #2c3540;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
             display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .config-taxa input {
+            background-color: #0b0c10;
+            border: 1px solid #00d2ff;
+            padding: 8px 12px;
+            color: white;
+            width: 80px;
+            text-align: center;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .btn-link {
+            background-color: #1f2833;
+            color: #00ff66;
+            text-decoration: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-weight: bold;
+            border: 1px solid rgba(0,255,102,0.3);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-link:hover {
+            background-color: rgba(0,255,102,0.1);
+        }
+
+        .pedido-card {
+            background-color: #1f2833;
+            border: 1px solid #2c3540;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .topo-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 10px;
+            flex-wrap: wrap;
             gap: 10px;
         }
 
-        .btn-cancelar {
-            background-color: rgba(255,77,77,0.1);
+        .itens-lista {
+            margin: 15px 0;
+            background: #0b0c10;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.02);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .status-badge {
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+        .status-pendente {
+            color: #ffbb00;
+            background-color: rgba(255,187,0,0.1);
+            border: 1px solid rgba(255,187,0,0.2);
+        }
+        .status-efetived, .status-efetivado {
+            color: #00ff66;
+            background-color: rgba(0,255,102,0.1);
+            border: 1px solid rgba(0,255,102,0.2);
+        }
+        .status-cancelado {
             color: #ff4d4d;
-            border: 1px solid #ff4d4d;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.2s;
+            background-color: rgba(255,77,77,0.1);
+            border: 1px solid rgba(255,77,77,0.2);
         }
-        .btn-cancelar:hover { background-color: #ff4d4d; color: black; }
 
-        .btn-editar {
-            background-color: rgba(255, 165, 0, 0.1);
-            color: #ffa500;
-            border: 1px solid #ffa500;
-            padding: 8px 16px;
+        .info-checkout-metodo {
+            font-size: 13px;
+            color: #00d2ff;
+            background: rgba(0, 210, 255, 0.05);
+            padding: 10px 12px;
             border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.2s;
+            border: 1px solid rgba(0, 210, 255, 0.1);
+            margin-bottom: 15px;
         }
-        .btn-editar:hover { background-color: #ffa500; color: black; }
 
-        button:disabled {
-            opacity: 0.4 !important;
-            cursor: not-allowed !important;
+        .rodape-valores {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .bloco-acoes {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .btn-acao {
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-aprovar {
+            background-color: rgba(0, 255, 102, 0.1);
+            color: #00ff66;
+            border: 1px solid #00ff66;
+        }
+        .btn-aprovar:hover {
+            background-color: #00ff66;
+            color: #0b0c10;
+        }
+        .btn-cancelar {
+            background-color: rgba(255, 187, 0, 0.1);
+            color: #ffbb00;
+            border: 1px solid #ffbb00;
+        }
+        .btn-cancelar:hover {
+            background-color: #ffbb00;
+            color: #0b0c10;
+        }
+        .btn-excluir {
+            background-color: #ff4d4d;
+            color: #0b0c10;
+            margin-left: auto;
+        }
+        .btn-excluir:hover {
+            background-color: #cc3d3d;
+        }
+        @media (max-width: 500px) {
+            .btn-excluir {
+                margin-left: 0;
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div class="header-area">
-        <a href="catalogo.html" class="btn-voltar">← Voltar para o Catálogo</a>
-        <span class="info-usuario-titulo" id="perfil-email">Carregando perfil...</span>
-        <h2>📦 Meus Pedidos</h2>
-    </div>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Painel de Pedidos Recebidos (Administração)</h1>
+            <div>
+                <a href="financeiro.html" class="btn-link" style="margin-right: 10px;">📊 Relatórios de Caixa</a>
+                <a href="catalogo.html" class="btn-link" style="color: #aaa; border-color: #333;">Voltar ao Catálogo</a>
+            </div>
+        </div>
 
-    <div class="pedidos-lista" id="lista-container">
-        <p style="text-align: center; color: #666;">Verificando banco de dados...</p>
+        <div class="config-taxa">
+            <span>⚙️ <b>Taxa de Acréscimo Comercial Crédito (+6x):</b></span>
+            <input type="number" id="input-taxa-admin" value="2.5" step="0.1" min="0">
+            <span>%</span>
+        </div>
+
+        <div id="lista-adm-pedidos">
+            <p style="color: #666; font-style: italic;">Sincronizando registros ativos de vendas...</p>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, update, runTransaction, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, onValue, update, remove, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "SUA_API_KEY",
@@ -161,163 +247,153 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        let todosPedidos = {};
-        let executandoAcao = false; 
-        let emailSessaoLogado = "";
+        let todosPedidosCache = {};
+        const containerLista = document.getElementById("lista-adm-pedidos");
+        const inputTaxaAdmin = document.getElementById("input-taxa-admin");
 
-        const container = document.getElementById("lista-container");
-        const txtPerfilEmail = document.getElementById("perfil-email");
+        // Altera a taxa global armazenada nas configurações do sistema
+        inputTaxaAdmin.addEventListener("input", () => {
+            let valor = parseFloat(inputTaxaAdmin.value || 0);
+            update(ref(db, "configuracoes"), { taxa_juros: valor });
+        });
 
-        // --- TRAVA DE SEGURANÇA EXCLUSIVA COM BASE NA AUTENTICAÇÃO ---
-        if(localStorage.getItem("email_logado")) {
-            emailSessaoLogado = localStorage.getItem("email_logado").trim().toLowerCase();
-            txtPerfilEmail.innerText = `Histórico de: ${emailSessaoLogado}`;
-            ouvirPedidosDoBanco(emailSessaoLogado);
-        } else {
-            txtPerfilEmail.innerText = "Sessão inválida";
-            txtPerfilEmail.style.color = "#ff4d4d";
-            container.innerHTML = "<p style='text-align: center; color:#ff4d4d; font-weight:bold;'>Erro de Autenticação. Faça login novamente.</p>";
-        }
-
-        function ouvirPedidosDoBanco(emailCliente) {
-            onValue(ref(db, "pedidos"), (snapshot) => {
-                if(snapshot.exists()) {
-                    todosPedidos = snapshot.val();
-                    renderizarPedidosDoCliente(emailCliente);
-                } else {
-                    container.innerHTML = "<p style='text-align: center; color:#666;'>Nenhum registro encontrado no sistema.</p>";
-                }
-            });
-        }
-
-        function renderizarPedidosDoCliente(emailCliente) {
-            container.innerHTML = "";
-            
-            // Filtra os pedidos estritamente vinculados ao e-mail coletado do login
-            let filtrados = Object.keys(todosPedidos).filter(id => todosPedidos[id].email && todosPedidos[id].email.toLowerCase() === emailCliente).reverse();
-
-            if(filtrados.length === 0) {
-                container.innerHTML = "<p style='text-align: center; color:#aaa;'>Você ainda não realizou nenhum pedido com esta conta.</p>";
-                return;
+        // Obtém o valor em tempo real da taxa cadastrada
+        onValue(ref(db, "configuracoes/taxa_juros"), (snap) => {
+            if(snap.exists()) {
+                inputTaxaAdmin.value = snap.val();
             }
+        });
 
-            filtrados.forEach(id => {
-                const ped = todosPedidos[id];
+        // Monitoramento geral do nó de transações
+        onValue(ref(db, "pedidos"), (snapshot) => {
+            if(snapshot.exists()) {
+                todosPedidosCache = snapshot.val();
+                renderizarPainelAdmin();
+            } else {
+                todosPedidosCache = {};
+                containerLista.innerHTML = "<p style='color:#666; font-style: italic;'>Nenhum pedido localizado no histórico do sistema.</p>";
+            }
+        });
+
+        function renderizarPainelAdmin() {
+            containerLista.innerHTML = "";
+            let chavesOrdenadas = Object.keys(todosPedidosCache).reverse();
+
+            chavesOrdenadas.forEach(idPedido => {
+                const pedido = todosPedidosCache[idPedido];
                 const card = document.createElement("div");
-                card.className = "card-pedido";
+                card.className = "pedido-card";
 
                 let htmlItens = "";
-                if(ped.itens) {
-                    Object.keys(ped.itens).forEach(k => {
-                        const it = ped.itens[k];
-                        htmlItens += `<div class="item-linha">🔷 <b>${it.quantidade}x</b> ${it.nome}</div>`;
+                if(pedido.itens) {
+                    Object.keys(pedido.itens).forEach(idItem => {
+                        const item = pedido.itens[idItem];
+                        htmlItens += `• <b>${item.quantidade}x</b> ${item.nome} — Unitário: R$ ${parseFloat(item.precoUnitario || 0).toFixed(2).replace('.',',')}<br>`;
                     });
                 }
 
-                let botoesHTML = "";
-                if(ped.status === "pendente") {
-                    botoesHTML = `
-                        <div class="btn-acao-container">
-                            <button class="btn-editar" data-id="${id}" onclick="editarMeuPedido('${id}', this)">✏️ Editar Pedido</button>
-                            <button class="btn-cancelar" data-id="${id}" onclick="cancelarMeuPedido('${id}', this)">❌ Cancelar</button>
-                        </div>
-                    `;
-                }
+                // Fallback de segurança para pedidos sem estrutura de faturamento prévia
+                const faturamento = pedido.faturamento || { 
+                    formaPagamento: 'Não informada', 
+                    parcelas: 1, 
+                    valorFaturado: pedido.total 
+                };
+
+                // Normalização visual da string do status do badge
+                let statusLimpo = pedido.status === "efetived" ? "efetivado" : pedido.status;
 
                 card.innerHTML = `
-                    <div class="pedido-header">
-                        <div>
-                            <span style="font-size: 13px; color: #aaa;">Data: ${ped.data || ''}</span><br>
-                            <span style="font-size: 11px; color: #666;">ID: ${id}</span>
-                        </div>
-                        <span class="status-tag ${ped.status}">${ped.status}</span>
+                    <div class="topo-card">
+                        <span>👤 Comprador: ${pedido.email}</span>
+                        <span class="status-badge status-${statusLimpo}">${statusLimpo}</span>
                     </div>
-                    <div style="margin-bottom: 15px;">
-                        ${htmlItens}
+                    <div style="font-size: 11px; color:#777; margin: 6px 0;">ID: ${idPedido} | Enviado em: ${pedido.data || 'N/A'}</div>
+                    <div class="itens-lista">${htmlItens}</div>
+                    
+                    <div class="info-checkout-metodo">
+                        💳 Condição de Checkout: Pagamento via <b>${faturamento.formaPagamento.toUpperCase()}</b> em <b>${faturamento.parcelas}x</b>
                     </div>
-                    <div class="pedido-footer">
-                        <span style="color:#00ff66; font-weight:bold; font-size:18px;">Total: R$ ${parseFloat(ped.total).toFixed(2).replace('.',',')}</span>
-                        ${botoesHTML}
+
+                    <div class="rodape-valores">
+                        <span style="color: #888; font-size: 13px;">Valor de Custo Original: R$ ${parseFloat(pedido.total || 0).toFixed(2).replace('.',',')}</span>
+                        <span style="font-size: 19px; color: #00ff66; font-weight: bold;">Total Liquidado: R$ ${parseFloat(faturamento.valorFaturado || 0).toFixed(2).replace('.',',')}</span>
+                    </div>
+
+                    <div class="bloco-acoes">
+                        ${pedido.status === "pendente" ? `
+                            <button class="btn-acao btn-aprovar" onclick="processarAprovacaoPedido('${idPedido}')">✓ Aprovar Pedido</button>
+                            <button class="btn-acao btn-cancelar" onclick="processarCancelamentoSeguro('${idPedido}')">❌ Cancelar Pedido</button>
+                        ` : ''}
+                        <button class="btn-acao btn-excluir" onclick="removerRegistroHistorico('${idPedido}')">Excluir Registro</button>
                     </div>
                 `;
-                container.appendChild(card);
+                containerLista.appendChild(card);
             });
         }
 
-        // --- SISTEMA BLINDADO DE EDIÇÃO ---
-        window.editarMeuPedido = async function(id, btn) {
-            if(executandoAcao) return;
-
-            const snapValidacao = await get(ref(db, `pedidos/${id}/status`));
-            if(!snapValidacao.exists() || snapValidacao.val() !== "pendente") {
-                alert("Este pedido mudou de estado e não está mais disponível para alteração.");
-                return;
-            }
-
-            if(confirm("Deseja reabrir este pedido? Seus itens retornarão ao catálogo e este registro pendente será arquivado.")) {
-                executandoAcao = true;
-                btn.disabled = true;
-
-                const pedido = todosPedidos[id];
-                let listaItensRecuperados = [];
-
-                if(pedido && pedido.itens) {
-                    for (const k of Object.keys(pedido.itens)) {
-                        const item = pedido.itens[k];
-                        const estoqueRef = ref(db, `produtos/${k}/estoque`);
-
-                        await runTransaction(estoqueRef, (atual) => {
-                            if(atual === null) return atual;
-                            return atual + parseInt(item.quantidade);
-                        });
-
-                        listaItensRecuperados.push({
-                            id: k,
-                            nome: item.nome,
-                            preco: parseFloat(item.precoUnitario || 0),
-                            quantidade: parseInt(item.quantidade)
-                        });
-                    }
-                }
-
-                localStorage.setItem("carrinho_recuperado", JSON.stringify(listaItensRecuperados));
-                await update(ref(db, `pedidos/${id}`), { status: "cancelado" });
-
-                alert("Itens enviados para o seu carrinho! Você será enviado ao catálogo para alterá-los.");
-                window.location.href = "catalogo.html";
+        // Função global de alteração de status simples (Aprovação)
+        window.processarAprovacaoPedido = async function(id) {
+            if(!confirm("Deseja marcar este pedido como EFETIVADO e liberar o envio?")) return;
+            try {
+                await update(ref(db, `pedidos/${id}`), { status: "efetivado" });
+                alert("Pedido faturado e aprovado com sucesso!");
+            } catch(e) { 
+                alert("Erro operacional ao atualizar o banco de dados."); 
             }
         };
 
-        // --- SISTEMA BLINDADO DE CANCELAMENTO ---
-        window.cancelarMeuPedido = async function(id, btn) {
-            if(executandoAcao) return;
+        // TRAVA RIGIDA CONTRA RE-CLIQUES E REABASTECIMENTO DUPLICADO DE ESTOQUE
+        window.processarCancelamentoSeguro = async function(id) {
+            if(!confirm("Atenção! Deseja cancelar este pedido? Esta operação devolverá os itens ao estoque de forma definitiva.")) return;
+            
+            const pedidoRef = ref(db, `pedidos/${id}`);
+            let erroStatusBloqueado = false;
+            let dadosDoPedidoParaDevolucao = null;
 
-            const snapValidacao = await get(ref(db, `pedidos/${id}/status`));
-            if(!snapValidacao.exists() || snapValidacao.val() !== "pendente") {
-                alert("O pedido já foi faturado ou modificado pelo administrador!");
+            // Executa transação isolada para verificar e travar o status do pedido na hora
+            await runTransaction(pedidoRef, (estadoAtualNoBanco) => {
+                if(estadoAtualNoBanco === null) return estadoAtualNoBanco;
+                
+                // Se o status já mudou na nuvem, cancela a transação localmente
+                if(estadoAtualNoBanco.status !== "pendente") {
+                    erroStatusBloqueado = true;
+                    return estadoAtualNoBanco;
+                }
+                
+                // Garante que o status vira cancelado IMEDIATAMENTE para bloquear novos cliques
+                dadosDoPedidoParaDevolucao = estadoAtualNoBanco;
+                estadoAtualNoBanco.status = "cancelado";
+                return estadoAtualNoBanco;
+            });
+
+            if(erroStatusBloqueado || !dadosDoPedidoParaDevolucao) {
+                alert("Erro de Consistência: Este pedido já foi faturado, alterado ou cancelado por outro operador!");
                 return;
             }
 
-            if(confirm("Tem certeza que deseja cancelar este pedido? Seus itens retornarão ao estoque comercial.")) {
-                executandoAcao = true;
-                btn.disabled = true;
-
-                const pedido = todosPedidos[id];
-                if(pedido && pedido.itens) {
-                    for (const k of Object.keys(pedido.itens)) {
-                        const item = pedido.itens[k];
-                        const estoqueRef = ref(db, `produtos/${k}/estoque`);
-
-                        await runTransaction(estoqueRef, (atual) => {
-                            if(atual === null) return atual;
-                            return atual + parseInt(item.quantidade);
-                        });
-                    }
+            // Devolução segura e atômica dos itens associados de volta ao inventário comercial
+            if(dadosDoPedidoParaDevolucao.itens) {
+                for(const idItem of Object.keys(dadosDoPedidoParaDevolucao.itens)) {
+                    const itemParaDevolver = dadosDoPedidoParaDevolucao.itens[idItem];
+                    
+                    await runTransaction(ref(db, `produtos/${idItem}/estoque`), (estoqueInventarioAtual) => {
+                        if(estoqueInventarioAtual === null) return parseInt(itemParaDevolver.quantidade);
+                        return estoqueInventarioAtual + parseInt(itemParaDevolver.quantidade);
+                    });
                 }
+            }
+            alert("Sucesso! Pedido cancelado e mercadorias retornadas ao estoque comercial.");
+        };
 
-                await update(ref(db, `pedidos/${id}`), { status: "cancelado" });
-                alert("Pedido cancelado com sucesso!");
-                executandoAcao = false;
+        // Remove o nó completamente do Realtime Database histórico
+        window.removerRegistroHistorico = async function(id) {
+            if(confirm("Deseja apagar permanentemente este registro das telas administrativas? (Isso não altera o estoque)")) {
+                try {
+                    await remove(ref(db, `pedidos/${id}`));
+                    alert("Registro removido do banco.");
+                } catch(e) {
+                    alert("Falha ao deletar nó do Firebase.");
+                }
             }
         };
     </script>
