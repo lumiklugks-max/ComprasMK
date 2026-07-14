@@ -78,62 +78,6 @@
             color: #000000;
         }
 
-        .auth-container {
-            background-color: #1f2833;
-            border-radius: 10px;
-            padding: 20px;
-            width: 100%;
-            max-width: 1200px;
-            margin-top: 20px;
-            border: 1px solid #45f3ff1a;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .auth-inputs {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .auth-inputs input {
-            background-color: #0b0c10;
-            border: 1px solid #45f3ff33;
-            color: #fff;
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-size: 14px;
-            outline: none;
-            min-width: 250px;
-        }
-
-        .btn-auth {
-            background-color: #00ff66;
-            color: #000000;
-            border: none;
-            padding: 10px 20px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .btn-auth:hover { background-color: #00cc52; }
-
-        .btn-logout {
-            background-color: #ff4d4d;
-            color: #fff;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
         .grid-produtos {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -260,7 +204,7 @@
 
         .btn-qtd-cart:hover {
             background-color: #00d2ff;
-            color: #000;
+            color: #00;
         }
 
         .total-carrinho {
@@ -295,7 +239,7 @@
 
         .btn-finalizar {
             background-color: #00ff66;
-            color: #000;
+            color: #00;
             border: none;
             padding: 14px;
             font-weight: bold;
@@ -329,18 +273,6 @@
         <div class="nav-links">
             <a href="meus_pedidos.html">📋 Meus Pedidos</a>
             <a href="admin_produtos.html">🛠️ Painel Admin</a>
-        </div>
-    </div>
-
-    <div class="auth-container" id="bloco-autenticacao">
-        <div class="auth-inputs" id="inputs-deslogado">
-            <label for="input-email-cliente" style="font-weight: bold;">Identifique-se para comprar:</label>
-            <input type="email" id="input-email-cliente" placeholder="Digite seu e-mail institucional ou pessoal">
-            <button class="btn-auth" id="btn-login-sessao">Entrar / Confirmar</button>
-        </div>
-        <div id="infos-logado" style="display: none; width: 100%; justify-content: space-between; align-items: center;">
-            <span style="font-weight: bold; color: #00ff66;">🟢 Logado como: <span id="txt-email-ativo" style="color: #fff;"></span></span>
-            <button class="btn-logout" id="btn-logout-sessao">Alterar E-mail</button>
         </div>
     </div>
 
@@ -410,60 +342,18 @@
         const db = getDatabase(app);
 
         // --- CONTROLE DE TAXAS DINÂMICAS ---
-        let taxaAcrescimoConfig = 2.5; // Valor padrão inicial de segurança (2.5%)
+        let taxaAcrescimoConfig = 2.5; 
 
-        // Escuta dinamicamente as configurações salvas no banco para descongelar a taxa
         onValue(ref(db, "configuracoes/taxaCredito"), (snapshot) => {
             if (snapshot.exists()) {
                 taxaAcrescimoConfig = parseFloat(snapshot.val());
-                atualizarCarrinhoVisual(); // Recalcula a interface caso a taxa mude
+                atualizarCarrinhoVisual(); 
             }
         });
 
-        // --- PROPRIEDADES DE SESSÃO DO USUÁRIO ---
+        // --- SESSÃO INTEGRADA DO USUÁRIO ---
+        // Recupera o e-mail que já foi previamente logado no sistema geral
         let emailUsuarioLogado = localStorage.getItem("usuarioLogadoEmail") || "";
-        const divDeslogado = document.getElementById("inputs-deslogado");
-        const divLogado = document.getElementById("infos-logado");
-        const txtEmailAtivo = document.getElementById("txt-email-ativo");
-        const inputEmail = document.getElementById("input-email-cliente");
-        const btnLogin = document.getElementById("btn-login-sessao");
-        const btnLogout = document.getElementById("btn-logout-sessao");
-
-        function gerenciarInterfaceAuth() {
-            if(emailUsuarioLogado) {
-                divDeslogado.style.display = "none";
-                divLogado.style.display = "flex";
-                txtEmailAtivo.innerText = emailUsuarioLogado;
-            } else {
-                divDeslogado.style.display = "flex";
-                divLogado.style.display = "none";
-                txtEmailAtivo.innerText = "";
-            }
-            ajustarEstadoBotaoFinalizar();
-        }
-
-        if(btnLogin) {
-            btnLogin.addEventListener("click", () => {
-                const emailVal = inputEmail.value.trim();
-                if(!emailVal || !emailVal.includes("@")) {
-                    alert("Por favor, digite um e-mail válido para prosseguir.");
-                    return;
-                }
-                emailUsuarioLogado = emailVal;
-                localStorage.setItem("usuarioLogadoEmail", emailUsuarioLogado);
-                gerenciarInterfaceAuth();
-            });
-        }
-
-        if(btnLogout) {
-            btnLogout.addEventListener("click", () => {
-                if(confirm("Deseja mesmo alterar o e-mail ativo da sessão comercial?")) {
-                    emailUsuarioLogado = "";
-                    localStorage.removeItem("usuarioLogadoEmail");
-                    gerenciarInterfaceAuth();
-                }
-            });
-        }
 
         // --- GERENCIAMENTO DE PRODUTOS E CARRINHO ---
         const gridProdutos = document.getElementById("grid-produtos-container");
@@ -524,7 +414,6 @@
                 gridProdutos.appendChild(card);
             });
 
-            // Atualiza o carrinho visual caso o estoque de algum produto mude em segundo plano
             atualizarCarrinhoVisual();
         });
 
@@ -610,7 +499,6 @@
                 const numParcelas = parseInt(selectParcelas.value || 1, 10);
                 if(numParcelas > 6) {
                     const excedentes = numParcelas - 6;
-                    // Aplica a taxa de juros atualizada dinamicamente do Firebase sobre as parcelas excedentes
                     valorFaturadoFinal = totalBasePedido * (1 + ((taxaAcrescimoConfig / 100) * excedentes));
                     if(alertaTaxa) {
                         alertaTaxa.style.display = "block";
@@ -627,7 +515,8 @@
 
         function ajustarEstadoBotaoFinalizar() {
             if(!btnFecharPedido) return;
-            if(carrinhoLocal.length > 0 && emailUsuarioLogado !== "") {
+            // Se houver itens no carrinho, habilita o botão (a verificação do e-mail ocorre no clique)
+            if(carrinhoLocal.length > 0) {
                 btnFecharPedido.disabled = false;
             } else {
                 btnFecharPedido.disabled = true;
@@ -653,8 +542,11 @@
         // --- SUBMISSÃO E VALIDAÇÃO ATÔMICA DO PEDIDO ---
         if(btnFecharPedido) {
             btnFecharPedido.addEventListener("click", async () => {
+                // Tenta puxar o e-mail ativo novamente do localStorage caso tenha mudado
+                emailUsuarioLogado = localStorage.getItem("usuarioLogadoEmail") || "";
+
                 if(!emailUsuarioLogado) {
-                    alert("Ação negada: Você precisa preencher seu e-mail de identificação no topo da tela.");
+                    alert("Ação negada: Nenhum usuário identificado no sistema. Por favor, realize o login antes de acessar o catálogo.");
                     return;
                 }
                 if(carrinhoLocal.length === 0) {
@@ -666,7 +558,7 @@
                 btnFecharPedido.innerText = "Processando transação...";
 
                 try {
-                    // 1. Validação Atômica Preliminar do Estoque antes de gerar a transação
+                    // 1. Validação Atômica Preliminar do Estoque
                     for (const cartItem of carrinhoLocal) {
                         const snapshotEstoque = await new Promise((resolve) => {
                             onValue(ref(db, `produtos/${cartItem.id}/estoque`), (snap) => resolve(snap), { onlyOnce: true });
@@ -680,7 +572,7 @@
                         }
                     }
 
-                    // 2. Transação Atômica: Deduz os itens do estoque de forma segura no banco de dados
+                    // 2. Transação Atômica: Deduz os itens do estoque de forma segura
                     let objItensLote = {};
                     let totalBasePedido = 0;
 
@@ -700,7 +592,7 @@
                         });
                     }
 
-                    // 3. Processamento de Faturamento com Juros Dinâmicos
+                    // 3. Processamento de Faturamento
                     let numParcelas = 1;
                     let valorFaturadoFinal = totalBasePedido;
 
@@ -712,7 +604,7 @@
                         }
                     }
 
-                    // 4. Criação do Pedido atrelado ao e-mail do cliente ativo na sessão
+                    // 4. Criação do Pedido
                     const novoPedidoRef = push(ref(db, "pedidos"));
                     await set(novoPedidoRef, {
                         email: emailUsuarioLogado.trim().toLowerCase(),
@@ -740,9 +632,6 @@
                 }
             });
         }
-
-        // Inicializa a verificação de e-mail ao carregar a página
-        gerenciarInterfaceAuth();
     </script>
 </body>
 </html>
