@@ -204,7 +204,7 @@
 
         .btn-qtd-cart:hover {
             background-color: #00d2ff;
-            color: #00;
+            color: #000;
         }
 
         .total-carrinho {
@@ -239,7 +239,7 @@
 
         .btn-finalizar {
             background-color: #00ff66;
-            color: #00;
+            color: #000;
             border: none;
             padding: 14px;
             font-weight: bold;
@@ -352,7 +352,6 @@
         });
 
         // --- SESSÃO INTEGRADA DO USUÁRIO ---
-        // Recupera o e-mail que já foi previamente logado no sistema geral
         let emailUsuarioLogado = localStorage.getItem("usuarioLogadoEmail") || "";
 
         // --- GERENCIAMENTO DE PRODUTOS E CARRINHO ---
@@ -452,6 +451,35 @@
             atualizarCarrinhoVisual();
         }
 
+        // Reconstrói as opções de parcelas exibindo o valor de cada parcela atualizado
+        function atualizarOpcoesParcelamento(totalBase) {
+            if(!selectParcelas) return;
+            const parcelaSelecionadaOriginal = selectParcelas.value;
+            selectParcelas.innerHTML = "";
+
+            for(let i = 1; i <= 12; i++) {
+                let valorTotalComTaxa = totalBase;
+                let textoExtra = "sem juros";
+
+                if(i > 6) {
+                    const excedentes = i - 6;
+                    valorTotalComTaxa = totalBase * (1 + ((taxaAcrescimoConfig / 100) * excedentes));
+                    textoExtra = "com taxa adicional";
+                }
+
+                const valorParcela = valorTotalComTaxa / i;
+                const opt = document.createElement("option");
+                opt.value = i;
+                opt.innerText = `${i}x de R$ ${valorParcela.toFixed(2).replace('.', ',')} (${textoExtra})`;
+                
+                selectParcelas.appendChild(opt);
+            }
+            // Preserva a seleção atual do usuário caso não estoure limites
+            if(parcelaSelecionadaOriginal) {
+                selectParcelas.value = parcelaSelecionadaOriginal;
+            }
+        }
+
         function atualizarCarrinhoVisual() {
             if(!listaCarrinhoItens) return;
             listaCarrinhoItens.innerHTML = "";
@@ -493,6 +521,9 @@
                 listaCarrinhoItens.appendChild(itemDiv);
             });
 
+            // Atualiza as opções do HTML mostrando "Xx de R$ Y,YY"
+            atualizarOpcoesParcelamento(totalBasePedido);
+
             // Lógica de Acréscimo Dinâmico/Parcelamento
             let valorFaturadoFinal = totalBasePedido;
             if (selectMetodo && selectMetodo.value === "credito") {
@@ -501,8 +532,9 @@
                     const excedentes = numParcelas - 6;
                     valorFaturadoFinal = totalBasePedido * (1 + ((taxaAcrescimoConfig / 100) * excedentes));
                     if(alertaTaxa) {
+                        const valorParcelado = valorFaturadoFinal / numParcelas;
                         alertaTaxa.style.display = "block";
-                        alertaTaxa.innerText = `⚠️ Aplicada taxa administrativa de ${taxaAcrescimoConfig}% por parcela acima de 6x.`;
+                        alertaTaxa.innerText = `⚠️ Aplicada taxa administrativa de ${taxaAcrescimoConfig}% por parcela excedente. Parcela atual: ${numParcelas}x de R$ ${valorParcelado.toFixed(2).replace('.', ',')}`;
                     }
                 } else {
                     if(alertaTaxa) alertaTaxa.style.display = "none";
@@ -515,7 +547,6 @@
 
         function ajustarEstadoBotaoFinalizar() {
             if(!btnFecharPedido) return;
-            // Se houver itens no carrinho, habilita o botão (a verificação do e-mail ocorre no clique)
             if(carrinhoLocal.length > 0) {
                 btnFecharPedido.disabled = false;
             } else {
@@ -542,7 +573,6 @@
         // --- SUBMISSÃO E VALIDAÇÃO ATÔMICA DO PEDIDO ---
         if(btnFecharPedido) {
             btnFecharPedido.addEventListener("click", async () => {
-                // Tenta puxar o e-mail ativo novamente do localStorage caso tenha mudado
                 emailUsuarioLogado = localStorage.getItem("usuarioLogadoEmail") || "";
 
                 if(!emailUsuarioLogado) {
@@ -572,7 +602,7 @@
                         }
                     }
 
-                    // 2. Transação Atômica: Deduz os itens do estoque de forma segura
+                    // 2. Transação Atômica: Deduz os itens do estoque
                     let objItensLote = {};
                     let totalBasePedido = 0;
 
