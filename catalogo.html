@@ -272,7 +272,6 @@
         <h1>🛒 Catálogo de Produtos</h1>
         <div class="nav-links">
             <a href="meus_pedidos.html">📋 Meus Pedidos</a>
-            <a href="admin_produtos.html">🛠️ Painel Admin</a>
         </div>
     </div>
 
@@ -451,7 +450,6 @@
             atualizarCarrinhoVisual();
         }
 
-        // Reconstrói as opções de parcelas exibindo o valor de cada parcela atualizado
         function atualizarOpcoesParcelamento(totalBase) {
             if(!selectParcelas) return;
             const parcelaSelecionadaOriginal = selectParcelas.value;
@@ -474,7 +472,6 @@
                 
                 selectParcelas.appendChild(opt);
             }
-            // Preserva a seleção atual do usuário caso não estoure limites
             if(parcelaSelecionadaOriginal) {
                 selectParcelas.value = parcelaSelecionadaOriginal;
             }
@@ -521,10 +518,8 @@
                 listaCarrinhoItens.appendChild(itemDiv);
             });
 
-            // Atualiza as opções do HTML mostrando "Xx de R$ Y,YY"
             atualizarOpcoesParcelamento(totalBasePedido);
 
-            // Lógica de Acréscimo Dinâmico/Parcelamento
             let valorFaturadoFinal = totalBasePedido;
             if (selectMetodo && selectMetodo.value === "credito") {
                 const numParcelas = parseInt(selectParcelas.value || 1, 10);
