@@ -98,6 +98,13 @@
             color: #ffffff;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 4px 0;
+        }
+        .item-info {
+            display: flex;
+            align-items: center;
             gap: 10px;
         }
         .item-qtd {
@@ -110,6 +117,9 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 15px;
+            border-top: 1px solid #333;
+            padding-top: 15px;
+            margin-top: 10px;
         }
         .pedido-total {
             font-size: 16px;
@@ -119,6 +129,10 @@
         .pedido-total span {
             color: #00ff66;
             font-size: 18px;
+        }
+        .grupo-botoes {
+            display: flex;
+            gap: 10px;
         }
         .btn-cancelar-pedido {
             background-color: #ff4d4d;
@@ -132,6 +146,48 @@
             transition: background 0.2s;
         }
         .btn-cancelar-pedido:hover { background-color: #cc3333; }
+        
+        .btn-editar-pedido {
+            background-color: #00d2ff;
+            color: #0b0c10;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .btn-editar-pedido:hover { background-color: #00b2d9; }
+
+        /* Controles de edição dentro da linha */
+        .controles-edicao {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-ctrl {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            width: 26px;
+            height: 26px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-ctrl:hover { background-color: #444; }
+        .btn-ctrl-remover {
+            background-color: rgba(255, 77, 77, 0.2);
+            color: #ff4d4d;
+            border: 1px solid #ff4d4d;
+        }
+        .btn-ctrl-remover:hover { background-color: rgba(255, 77, 77, 0.4); }
+
         #loading-text {
             color: #aaaaaa;
             text-align: center;
@@ -151,7 +207,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCZq4K95loqNKYYuPFFrMS9QcUTCQ-FYRU",
@@ -166,9 +222,10 @@
         const db = getDatabase(app);
 
         const pedidosContainer = document.getElementById("pedidos-container");
-
-        // Recupera de forma segura o e-mail do cliente logado na sessão atual do navegador
         const emailUsuarioLogado = localStorage.getItem("usuarioLogadoEmail") || "";
+
+        // Objeto global temporário para controlar quais cards estão em modo de edição visual neste momento
+        const pedidosEmEdicao = {};
 
         onValue(ref(db, "pedidos"), (snapshot) => {
             if (!emailUsuarioLogado) {
@@ -185,7 +242,6 @@
                     ...pedidosObj[id]
                 })).reverse();
 
-                // FILTRO ESTRITO: Filtra no lado do cliente apenas os itens dele
                 const pedidosDoUsuario = listaPedidos.filter(p => p.email && p.email.trim().toLowerCase() === emailUsuarioLogado.trim().toLowerCase());
 
                 if (pedidosDoUsuario.length === 0) {
@@ -202,6 +258,7 @@
                     if(pedido.status === "cancelado") classeStatus = "status-cancelado";
                     
                     const textoStatus = pedido.status || "pendente";
+                    const modoEdicaoAtivo = pedidosEmEdicao[pedido.id] || false;
 
                     let htmlItens = "";
                     if (pedido.itens) {
@@ -210,21 +267,45 @@
                             const nomeProduto = item.nome || itemKey;
                             const quantidade = item.quantidade || item.qtd || 1;
 
-                            htmlItens += `
-                                <div class="item-linha">
-                                    🛍️ <span class="item-qtd">${quantidade}x</span> ${nomeProduto}
-                                </div>
-                            `;
+                            if (modoEdicaoAtivo) {
+                                // Modo Edição: Renderiza botões de ajuste de quantidade e exclusão direta do item
+                                htmlItens += `
+                                    <div class="item-linha">
+                                        <div class="item-info">🛍️ ${nomeProduto}</div>
+                                        <div class="controles-edicao">
+                                            <button class="btn-ctrl btn-menos" data-pedido="${pedido.id}" data-item="${itemKey}">-</button>
+                                            <span class="item-qtd" style="min-width: 20px; text-align: center;">${quantidade}</span>
+                                            <button class="btn-ctrl btn-mais" data-pedido="${pedido.id}" data-item="${itemKey}">+</button>
+                                            <button class="btn-ctrl btn-ctrl-remover btn-remover-item" data-pedido="${pedido.id}" data-item="${itemKey}" title="Excluir item">×</button>
+                                        </div>
+                                    </div>
+                                `;
+                            } else {
+                                // Modo Visualização Normal
+                                htmlItens += `
+                                    <div class="item-linha">
+                                        <div class="item-info">🛍️ <span class="item-qtd">${quantidade}x</span> ${nomeProduto}</div>
+                                    </div>
+                                `;
+                            }
                         });
                     }
 
                     const valorTotal = pedido.total ? pedido.total.toFixed(2).replace('.', ',') : "0,00";
-
-                    // Regra: se o status for nulo ou 'pendente', permite a exclusão
                     const podeExcluir = (!pedido.status || pedido.status === "pendente");
-                    const acaoBotaoHTML = podeExcluir 
-                        ? `<button class="btn-cancelar-pedido" data-id="${pedido.id}">❌ Excluir Pedido</button>` 
-                        : `<span style="font-size:12px; color:#aaa;">🔒 Processando</span>`;
+                    
+                    let acaoBotaoHTML = `<span style="font-size:12px; color:#aaa;">🔒 Processando</span>`;
+                    
+                    if (podeExcluir) {
+                        acaoBotaoHTML = `
+                            <div class="grupo-botoes">
+                                <button class="btn-editar-pedido" data-id="${pedido.id}">
+                                    ${modoEdicaoAtivo ? "💾 Concluir Edição" : "✏️ Editar Pedido"}
+                                </button>
+                                <button class="btn-cancelar-pedido" data-id="${pedido.id}">❌ Excluir Pedido</button>
+                            </div>
+                        `;
+                    }
 
                     card.innerHTML = `
                         <div class="pedido-header">
@@ -240,15 +321,55 @@
                         </div>
                     `;
 
+                    // Eventos para botões do rodapé do card se estiver pendente
                     if (podeExcluir) {
+                        // Botão Excluir Pedido Inteiro
                         card.querySelector(".btn-cancelar-pedido").addEventListener("click", (e) => {
-                            const idPedido = e.target.getAttribute("data-id");
+                            const idPedido = e.currentTarget.getAttribute("data-id");
                             if (confirm("Tem certeza que deseja remover e cancelar definitivamente este pedido pendente?")) {
                                 remove(ref(db, `pedidos/${idPedido}`))
                                     .then(() => alert("Pedido excluído com sucesso!"))
                                     .catch(err => console.error("Erro ao remover:", err));
                             }
                         });
+
+                        // Botão Alternar Modo Edição / Concluir
+                        card.querySelector(".btn-editar-pedido").addEventListener("click", (e) => {
+                            const idPedido = e.currentTarget.getAttribute("data-id");
+                            pedidosEmEdicao[idPedido] = !pedidosEmEdicao[idPedido];
+                            // Força a atualização local baseado no snapshot atual do Firebase
+                            document.dispatchEvent(new Event("atualizarInterface"));
+                        });
+
+                        // Eventos internos de edição (se o modo edição estiver ativo)
+                        if (modoEdicaoAtivo) {
+                            // Diminuir Quantidade
+                            card.querySelectorAll(".btn-menos").forEach(btn => {
+                                btn.addEventListener("click", (e) => {
+                                    const pId = e.target.getAttribute("data-pedido");
+                                    const iKey = e.target.getAttribute("data-item");
+                                    alterarQtdItem(pId, iKey, -1, pedido);
+                                });
+                            });
+
+                            // Aumentar Quantidade
+                            card.querySelectorAll(".btn-mais").forEach(btn => {
+                                btn.addEventListener("click", (e) => {
+                                    const pId = e.target.getAttribute("data-pedido");
+                                    const iKey = e.target.getAttribute("data-item");
+                                    alterarQtdItem(pId, iKey, 1, pedido);
+                                });
+                            });
+
+                            // Remover Item Individual do pedido
+                            card.querySelectorAll(".btn-remover-item").forEach(btn => {
+                                btn.addEventListener("click", (e) => {
+                                    const pId = e.target.getAttribute("data-pedido");
+                                    const iKey = e.target.getAttribute("data-item");
+                                    removerItemIndividual(pId, iKey, pedido);
+                                });
+                            });
+                        }
                     }
 
                     pedidosContainer.appendChild(card);
@@ -256,6 +377,73 @@
             } else {
                 pedidosContainer.innerHTML = "<p id='loading-text'>Você ainda não realizou nenhum pedido.</p>";
             }
+        });
+
+        // Função auxiliar para recalcular total e atualizar quantidade no Firebase
+        function alterarQtdItem(idPedido, itemKey, alteracao, pedidoOriginal) {
+            const item = pedidoOriginal.itens[itemKey];
+            const qtdAtual = item.quantidade || item.qtd || 1;
+            const novaQtd = qtdAtual + alteracao;
+
+            if (novaQtd <= 0) {
+                removerItemIndividual(idPedido, itemKey, pedidoOriginal);
+                return;
+            }
+
+            // Clona os itens do pedido e atualiza a quantidade do item modificado
+            const novosItens = { ...pedidoOriginal.itens };
+            novosItens[itemKey] = {
+                ...item,
+                quantidade: novaQtd,
+                qtd: novaQtd
+            };
+
+            // Recalcula o valor total do pedido inteiro com base nas novas quantidades
+            let novoTotal = 0;
+            Object.keys(novosItens).forEach(k => {
+                const preco = novosItens[k].preco || 0;
+                const q = novosItens[k].quantidade || novosItens[k].qtd || 1;
+                novoTotal += (preco * q);
+            });
+
+            // Atualiza o registro diretamente no banco sem modificar o carrinho atual do cliente
+            update(ref(db, `pedidos/${idPedido}`), {
+                itens: novosItens,
+                total: novoTotal
+            });
+        }
+
+        // Função auxiliar para remover item individual do pedido
+        function removerItemIndividual(idPedido, itemKey, pedidoOriginal) {
+            const novosItens = { ...pedidoOriginal.itens };
+            delete novosItens[itemKey];
+
+            // Se o pedido ficou completamente vazio após a remoção, deleta o pedido por inteiro
+            if (Object.keys(novosItens).length === 0) {
+                if (confirm("Este é o único item do pedido. Deseja excluir o pedido inteiro?")) {
+                    delete pedidosEmEdicao[idPedido];
+                    remove(ref(db, `pedidos/${idPedido}`));
+                }
+                return;
+            }
+
+            // Recalcula o valor total sem o item removido
+            let novoTotal = 0;
+            Object.keys(novosItens).forEach(k => {
+                const preco = novosItens[k].preco || 0;
+                const q = novosItens[k].quantidade || novosItens[k].qtd || 1;
+                novoTotal += (preco * q);
+            });
+
+            update(ref(db, `pedidos/${idPedido}`), {
+                itens: novosItens,
+                total: novoTotal
+            });
+        }
+
+        // Evento customizado fictício apenas para forçar o re-render visual ao alternar botões de salvar
+        document.addEventListener("atualizarInterface", () => {
+            onValue(ref(db, "pedidos"), () => {}, { onlyOnce: true });
         });
     </script>
 </body>
