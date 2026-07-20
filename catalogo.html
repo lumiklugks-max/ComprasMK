@@ -123,7 +123,7 @@
             margin-bottom: 15px;
             height: 60px;
             overflow-y: auto;
-        }
+            }
 
         .preco-produto {
             font-size: 20px;
@@ -365,6 +365,7 @@
 
         let cacheProdutos = {}; 
         let carrinhoLocal = []; 
+        let primeiraCargaProdutos = true;
 
         onValue(ref(db, "produtos"), (snapshot) => {
             if(!gridProdutos) return;
@@ -394,6 +395,7 @@
                         <div class="desc-produto">${prodData.descricao || 'Sem descrição cadastrada.'}</div>
                     </div>
                     <div>
+                        <img src="" style="display:none;">
                         <div class="preco-produto">R$ ${parseFloat(prodData.preco || 0).toFixed(2).replace('.', ',')}</div>
                         <div class="estoque-badge">${semEstoque ? '❌ Esgotado' : `📦 Estoque: ${estoqueRestante} unid.`}</div>
                         <button class="btn-adicionar" data-id="${prodId}" ${semEstoque ? 'disabled' : ''}>
@@ -412,12 +414,66 @@
                 gridProdutos.appendChild(card);
             });
 
+            // Recupera o pedido em edição apenas uma única vez na inicialização dos dados
+            if (primeiraCargaProdutos) {
+                verificarPedidoEmEdicao();
+                primeiraCargaProdutos = false;
+            }
+
             atualizarCarrinhoVisual();
         });
 
+        // --- SISTEMA DE CAPTURA DO PEDIDO PARA EDIÇÃO ---
+        let pedidoEmEdicaoId = null;
+        let itensOriginaisDoPedido = {}; 
+
+        function verificarPedidoEmEdicao() {
+            pedidoEmEdicaoId = localStorage.getItem("pedido_em_edicao_id");
+            const itensSalvosRaw = localStorage.getItem("pedido_em_edicao_itens");
+            const pagamentoSalvo = localStorage.getItem("pedido_em_edicao_pagamento");
+
+            if (pedidoEmEdicaoId && itensSalvosRaw) {
+                try {
+                    itensOriginaisDoPedido = JSON.parse(itensSalvosRaw);
+                    carrinhoLocal = [];
+
+                    // Mapeia o objeto de itens do Firebase de volta para o Array do carrinhoLocal
+                    Object.keys(itensOriginaisDoPedido).forEach((idItem) => {
+                        const quantidadeOriginal = parseInt(itensOriginaisDoPedido[idItem].quantidade || itensOriginaisDoPedido[idItem].qtd || 1, 10);
+                        carrinhoLocal.push({
+                            id: idItem,
+                            quantidade: quantidadeOriginal
+                        });
+                    });
+
+                    // Aplica a forma de pagamento que estava salva
+                    if (selectMetodo && pagamentoSalvo) {
+                        selectMetodo.value = pagamentoSalvo;
+                        if(pagamentoSalvo === "credito") {
+                            wrapperParcelas.style.display = "flex";
+                        }
+                    }
+
+                    // Muda estilização do botão para alertar alteração
+                    if (btnFecharPedido) {
+                        btnFecharPedido.innerText = "💾 Salvar Alterações do Pedido Pendente";
+                        btnFecharPedido.style.backgroundColor = "#00d2ff";
+                    }
+
+                } catch (e) {
+                    console.error("Erro ao estruturar dados do pedido em edição:", e);
+                }
+            }
+        }
+
         function adicionarAoCarrinho(id) {
             const itemExistente = carrinhoLocal.find(item => item.id === id);
-            const estoqueDisponivel = parseInt(cacheProdutos[id]?.estoque || 0, 10);
+            let estoqueDisponivel = parseInt(cacheProdutos[id]?.estoque || 0, 10);
+
+            // Se for modo edição, adiciona virtualmente o que já estava retido no pedido antigo
+            if (pedidoEmEdicaoId && itensOriginaisDoPedido[id]) {
+                estoqueDisponivel += parseInt(itensOriginaisDoPedido[id].quantidade || 0, 10);
+            }
 
             if(itemExistente) {
                 if(itemExistente.quantidade < estoqueDisponivel) {
@@ -437,7 +493,12 @@
             const itemIndex = carrinhoLocal.findIndex(item => item.id === id);
             if(itemIndex === -1) return;
 
-            const estoqueDisponivel = parseInt(cacheProdutos[id]?.estoque || 0, 10);
+            let estoqueDisponivel = parseInt(cacheProdutos[id]?.estoque || 0, 10);
+            
+            if (pedidoEmEdicaoId && itensOriginaisDoPedido[id]) {
+                estoqueDisponivel += parseInt(itensOriginaisDoPedido[id].quantidade || 0, 10);
+            }
+
             carrinhoLocal[itemIndex].quantidade += delta;
 
             if(carrinhoLocal[itemIndex].quantidade <= 0) {
@@ -583,21 +644,43 @@
                 btnFecharPedido.innerText = "Processando transação...";
 
                 try {
-                    // 1. Validação Atômica Preliminar do Estoque
+                    // 1. SE ESTIVER EM MODO EDIÇÃO: Devolve o estoque antigo ao banco temporariamente antes de recalcular
+                    if (pedidoEmEdicaoId) {
+                        for (const idOriginal in itensOriginaisDoPedido) {
+                            const qtdParaDevolver = parseInt(itensOriginaisDoPedido[idOriginal].quantidade || 0, 10);
+                            await runTransaction(ref(db, `produtos/${idOriginal}/estoque`), (estoqueAtual) => {
+                                if (estoqueAtual === null) return qtdParaDevolver;
+                                return estoqueAtual + qtdParaDevolver;
+                            });
+                        }
+                    }
+
+                    // 2. Validação Atômica do Estoque com base na nova compra
                     for (const cartItem of carrinhoLocal) {
                         const snapshotEstoque = await new Promise((resolve) => {
                             onValue(ref(db, `produtos/${cartItem.id}/estoque`), (snap) => resolve(snap), { onlyOnce: true });
                         });
                         const estoqueAtualReal = parseInt(snapshotEstoque.val() || 0, 10);
                         if (estoqueAtualReal < cartItem.quantidade) {
-                            alert(`Falha: O produto "${cacheProdutos[cartItem.id]?.nome || 'Item'}" teve saída de estoque recente e restam apenas ${estoqueAtualReal} unidades. Reajuste seu carrinho.`);
+                            alert(`Falha: O produto "${cacheProdutos[cartItem.id]?.nome || 'Item'}" não possui estoque suficiente. Restam apenas ${estoqueAtualReal} unidades.`);
+                            
+                            // Cancela a transação e se for o caso devolve o retido de volta
+                            if (pedidoEmEdicaoId) {
+                                for (const idOriginal in itensOriginaisDoPedido) {
+                                    const qtdParaDevolver = parseInt(itensOriginaisDoPedido[idOriginal].quantidade || 0, 10);
+                                    await runTransaction(ref(db, `produtos/${idOriginal}/estoque`), (estoqueAtual) => {
+                                        return Math.max(0, estoqueAtual - qtdParaDevolver);
+                                    });
+                                }
+                            }
+
                             btnFecharPedido.disabled = false;
-                            btnFecharPedido.innerText = "Confirmar Pedido 🚀";
+                            btnFecharPedido.innerText = pedidoEmEdicaoId ? "💾 Salvar Alterações do Pedido Pendente" : "Confirmar Pedido 🚀";
                             return;
                         }
                     }
 
-                    // 2. Transação Atômica: Deduz os itens do estoque
+                    // 3. Transação Atômica: Deduz os novos itens do estoque
                     let objItensLote = {};
                     let totalBasePedido = 0;
 
@@ -617,7 +700,7 @@
                         });
                     }
 
-                    // 3. Processamento de Faturamento
+                    // 4. Processamento de Faturamento
                     let numParcelas = 1;
                     let valorFaturadoFinal = totalBasePedido;
 
@@ -629,9 +712,10 @@
                         }
                     }
 
-                    // 4. Criação do Pedido
-                    const novoPedidoRef = push(ref(db, "pedidos"));
-                    await set(novoPedidoRef, {
+                    // 5. Criação ou Atualização do Pedido no Firebase
+                    const pedidoRef = pedidoEmEdicaoId ? ref(db, `pedidos/${pedidoEmEdicaoId}`) : push(ref(db, "pedidos"));
+                    
+                    await set(pedidoRef, {
                         email: emailUsuarioLogado.trim().toLowerCase(),
                         total: valorFaturadoFinal,
                         status: "pendente",
@@ -644,9 +728,15 @@
                         }
                     });
 
-                    alert("Seu pedido foi registrado com sucesso e encaminhado para a separação!");
+                    alert(pedidoEmEdicaoId ? "Seu pedido pendente foi atualizado com sucesso!" : "Seu pedido foi registrado com sucesso!");
+                    
+                    // Limpa estados de edição do LocalStorage
+                    localStorage.removeItem("pedido_em_edicao_id");
+                    localStorage.removeItem("pedido_em_edicao_itens");
+                    localStorage.removeItem("pedido_em_edicao_pagamento");
+
                     carrinhoLocal = [];
-                    atualizarCarrinhoVisual();
+                    window.location.href = "meus_pedidos.html";
 
                 } catch (error) {
                     console.error("Erro na transação de checkout:", error);
